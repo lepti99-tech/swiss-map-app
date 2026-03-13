@@ -11,3 +11,16 @@ body {
 .ol-attribution.ol-uncollapsible {
   height: 1.5em;
 }
+
+button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #6a6a6a; /* Helle Farbe bei Hover */
+}
