@@ -3,6 +3,7 @@
 import { initMap, map } from './map.js';
 import { setupGridUpdates } from './grid.js';
 import { toggleSquare } from './selection.js';
+import { createMenu } from './ui.js';
 
 // App initialisieren
 function initApp() {
@@ -13,7 +14,10 @@ function initApp() {
 
   // Raster-Updates einrichten
   setupGridUpdates();
-
+ 
+  // Menü erstellen
+  createMenu();
+  
   // Click-Event auf der Karte
   map.on("click", function (event) {
     const coordinate = event.coordinate;
