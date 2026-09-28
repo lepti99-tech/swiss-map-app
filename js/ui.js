@@ -1,11 +1,13 @@
 // ui.js
 // Verwaltung des User-Menüs (Buttons, Pop-ups)
 
-import { saveScenario, getActiveScenarioName, listScenarios, loadScenario } from './storage.js';
-import { loadSquares } from './selection.js';
+import { saveScenario, getActiveScenarioName, listScenarios, loadScenario, deleteScenario } from './storage.js';
+import { loadSquares, setCurrentColor, getCurrentColor, resetCurrentColor } from './selection.js';
+import { COLORS, DEFAULT_COLOR_ID } from './config.js';
 
 // Modul-Variable: Referenz auf das Anzeige-Element für das aktive Szenario
 let activeScenarioDisplay = null;
+let colorCircleElements = {}; // colorId -> DOM-Element, für die Umrandungs-Markierung
 
 // Funktion zum Erstellen des Menüs
 export function createMenu() {
@@ -42,8 +44,8 @@ export function createMenu() {
     newScenarioButton.innerText = 'Start new scenario';
     newScenarioButton.style.backgroundColor = '#4a4a4a';
     newScenarioButton.style.color = 'white';
-    newScenarioButton.style.width = '4cm';
-    newScenarioButton.style.marginBottom = '8px';
+    newScenarioButton.style.width = '4.5cm';
+    newScenarioButton.style.marginBottom = '5px';
     newScenarioButton.onclick = () => openNewScenarioPopup();
     menu.appendChild(newScenarioButton);
  
@@ -52,27 +54,54 @@ export function createMenu() {
     loadScenarioButton.innerText = 'Load existing scenario';
     loadScenarioButton.style.backgroundColor = '#4a4a4a';
     loadScenarioButton.style.color = 'white';
-    loadScenarioButton.style.width = '4cm';
-    loadScenarioButton.style.marginBottom = '8px';
+    loadScenarioButton.style.width = '4.5cm';
+    loadScenarioButton.style.marginBottom = '5px';
     loadScenarioButton.onclick = () => openLoadScenarioPopup();
     menu.appendChild(loadScenarioButton);
  
-    // Farbpalette (Funktionalität folgt später)
+    // Button zum Löschen eines Szenarios
+    const deleteScenarioButton = document.createElement('button');
+    deleteScenarioButton.innerText = 'Delete active scenario';
+    deleteScenarioButton.style.backgroundColor = '#4a4a4a';
+    deleteScenarioButton.style.color = 'white';
+    deleteScenarioButton.style.width = '4.5cm';
+    deleteScenarioButton.style.marginBottom = '8px';
+    deleteScenarioButton.onclick = () => openDeleteScenarioPopup();
+    menu.appendChild(deleteScenarioButton);
+
+    // Farbpalette
+    const colorPaletteLabel = document.createElement('div');
+    colorPaletteLabel.innerText = 'Color scheme:';
+    colorPaletteLabel.style.fontSize = '13px';
+    colorPaletteLabel.style.marginTop = '4px';
+    menu.appendChild(colorPaletteLabel);
+
     const colorPalette = document.createElement('div');
-    colorPalette.innerText = 'Color scheme:';
-    const colors = ['red', 'green', 'blue'];
-    colors.forEach(color => {
+    colorPalette.style.display = 'flex';
+    colorPalette.style.flexWrap = 'wrap';
+
+    Object.keys(COLORS).forEach((colorId) => {
+        const colorDef = COLORS[colorId];
         const colorCircle = document.createElement('div');
         colorCircle.style.width = '20px';
         colorCircle.style.height = '20px';
-        colorCircle.style.backgroundColor = color;
+        colorCircle.style.backgroundColor = colorDef.stroke;
         colorCircle.style.borderRadius = '50%';
         colorCircle.style.display = 'inline-block';
         colorCircle.style.margin = '5px';
-        colorCircle.onclick = () => selectColor(color);
+        colorCircle.style.cursor = 'pointer';
+        colorCircle.style.boxSizing = 'border-box';
+        colorCircle.title = colorDef.label;
+        colorCircle.onclick = () => selectColor(colorId);
+
+        colorCircleElements[colorId] = colorCircle;
         colorPalette.appendChild(colorCircle);
     });
+
     menu.appendChild(colorPalette);
+
+    // Initiale Markierung setzen (Standardfarbe ist beim Start aktiv)
+    updateColorSelectionDisplay();
  
     document.body.appendChild(menu);
 }
@@ -88,6 +117,23 @@ function updateActiveScenarioDisplay() {
     activeScenarioDisplay.innerText = activeName
         ? `Active scenario: ${activeName}`
         : 'Active scenario: –';
+}
+
+// ---------------------------------------------------------
+// Hilfsfunktion: Markierung der aktiven Farbe aktualisieren
+// ---------------------------------------------------------
+
+function updateColorSelectionDisplay() {
+    const activeColor = getCurrentColor();
+
+    Object.keys(colorCircleElements).forEach((colorId) => {
+        const circle = colorCircleElements[colorId];
+        if (colorId === activeColor) {
+            circle.style.border = '2px solid black';
+        } else {
+            circle.style.border = '2px solid transparent';
+        }
+    });
 }
 
 // ---------------------------------------------------------
@@ -180,6 +226,11 @@ function openNewScenarioPopup() {
             return;
         }
  
+        // Angezeigte Quadrate des vorherigen Szenarios zurücksetzen
+        loadSquares([]);
+        resetCurrentColor();
+        updateColorSelectionDisplay();
+
         // Erfolgreich gespeichert -> Pop-up schliessen
         updateActiveScenarioDisplay();
         document.body.removeChild(overlay);
@@ -284,6 +335,8 @@ function openLoadScenarioPopup() {
 
                 // Ausgewählte Quadrate auf der Karte darstellen
                 loadSquares(result.squares);
+                resetCurrentColor();
+                updateColorSelectionDisplay();
 
                 // Anzeige aktualisieren und Pop-up schliessen
                 updateActiveScenarioDisplay();
@@ -320,8 +373,116 @@ function openLoadScenarioPopup() {
     });
 }
 
+// ---------------------------------------------------------
+// Pop-up: Aktives Szenario löschen
+// ---------------------------------------------------------
+
+function openDeleteScenarioPopup() {
+    // Overlay (abgedunkelter Hintergrund)
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+    overlay.style.zIndex = '2000';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+
+    // Pop-up-Box
+    const box = document.createElement('div');
+    box.style.backgroundColor = 'white';
+    box.style.padding = '20px';
+    box.style.borderRadius = '6px';
+    box.style.boxShadow = '2px 2px 10px rgba(0, 0, 0, 0.5)';
+    box.style.display = 'flex';
+    box.style.flexDirection = 'column';
+    box.style.minWidth = '250px';
+
+    // Bereich für Fehlermeldungen
+    const errorMsg = document.createElement('div');
+    errorMsg.style.color = 'red';
+    errorMsg.style.fontSize = '12px';
+    errorMsg.style.marginBottom = '8px';
+    errorMsg.style.minHeight = '14px';
+
+    const question = document.createElement('label');
+    question.innerText = 'Do you want to delete the active scenario?';
+    question.style.marginBottom = '12px';
+    box.appendChild(question);
+
+    box.appendChild(errorMsg);
+
+    // Button-Reihe
+    const buttonRow = document.createElement('div');
+    buttonRow.style.display = 'flex';
+    buttonRow.style.justifyContent = 'space-between';
+
+    const confirmButton = document.createElement('button');
+    confirmButton.innerText = 'Yes, delete';
+    confirmButton.style.backgroundColor = '#4a4a4a';
+    confirmButton.style.color = 'white';
+    confirmButton.style.width = '48%';
+
+    const cancelButton = document.createElement('button');
+    cancelButton.innerText = 'No, exit';
+    cancelButton.style.backgroundColor = '#4a4a4a';
+    cancelButton.style.color = 'white';
+    cancelButton.style.width = '48%';
+
+    buttonRow.appendChild(confirmButton);
+    buttonRow.appendChild(cancelButton);
+    box.appendChild(buttonRow);
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+
+    // Löschen bestätigen
+    confirmButton.onclick = () => {
+        const activeName = getActiveScenarioName();
+
+        if (!activeName) {
+            errorMsg.innerText = 'Es ist kein Szenario aktiv.';
+            return;
+        }
+
+        const result = deleteScenario(activeName);
+
+        if (!result.success) {
+            errorMsg.innerText = result.error;
+            return;
+        }
+
+        // Angezeigte Quadrate auf der Karte zurücksetzen
+        loadSquares([]);
+        resetCurrentColor();
+        updateColorSelectionDisplay();
+
+        // Anzeige aktualisieren und Pop-up schliessen
+        updateActiveScenarioDisplay();
+        document.body.removeChild(overlay);
+    };
+
+
+    // Abbrechen
+    cancelButton.onclick = () => {
+        document.body.removeChild(overlay);
+    };
+
+    // Escape-Taste schliesst Pop-up
+    overlay.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            cancelButton.click();
+        }
+    });
+}
+
 // Funktion zur Farbauswahl
-function selectColor(color) {
-    // Logik folgt später
-    console.log("Farbe gewählt:", color);
+function selectColor(colorId) {
+    setCurrentColor(colorId);
+    updateColorSelectionDisplay();
+    console.log("Farbe gewählt:", colorId);
 }

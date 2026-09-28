@@ -1,11 +1,30 @@
 // Quadrat-Auswahl und -Verwaltung
 
-import { GRID_SIZE, GRID_ORIGIN, GRID_BOUNDS } from './config.js';
+import { GRID_SIZE, GRID_ORIGIN, GRID_BOUNDS, DEFAULT_COLOR_ID } from './config.js';
 import { selectedSquaresSource } from './map.js';
 import { updateActiveScenario } from './storage.js';
 
 // Speichert die ausgewählten Quadrate
 export const selectedSquares = {};
+
+// Aktuell gewählte Farbe (wird beim Setzen eines neuen Quadrats verwendet)
+let currentColor = DEFAULT_COLOR_ID;
+
+// Setzt die aktuell aktive Farbe (wird von ui.js beim Klick auf einen Farbkreis aufgerufen)
+export function setCurrentColor(colorId) {
+  currentColor = colorId;
+}
+
+// Gibt die aktuell aktive Farbe zurück (z. B. damit ui.js den Kreis markieren kann)
+export function getCurrentColor() {
+  return currentColor;
+}
+
+// Setzt die aktuelle Farbe auf den Standardwert zurück
+// (wird beim Start eines neuen Szenarios und beim Laden eines Szenarios aufgerufen)
+export function resetCurrentColor() {
+  currentColor = DEFAULT_COLOR_ID;
+}
 
 // Berechnet die ID eines Quadrats basierend auf Koordinaten
 export function getSquareId(x, y) {
@@ -75,7 +94,7 @@ export function isWithinBounds(x, y) {
 function getSquaresAsArray() {
   return Object.keys(selectedSquares).map((id) => [
     id,
-    selectedSquares[id].color || 'red'
+    selectedSquares[id].color || DEFAULT_COLOR_ID
   ]);
 }
 
@@ -94,18 +113,19 @@ export function toggleSquare(x, y) {
     delete selectedSquares[id];
     console.log(`Quadrat ${id} entfernt`);
   } else {
-    // Quadrat ist noch nicht ausgewählt → hinzufügen
+    // Quadrat ist noch nicht ausgewählt → hinzufügen, mit aktuell gewählter Farbe
     const polygon = createSquarePolygon(x, y);
     const feature = new ol.Feature(polygon);
     feature.setId(id);
+    feature.set('colorId', currentColor);
 
     selectedSquaresSource.addFeature(feature);
     selectedSquares[id] = {
       feature: feature,
       visited: true,
-      color: 'red' // aktuell noch fix, Farbauswahl folgt später
+      color: currentColor
     };
-    console.log(`Quadrat ${id} hinzugefügt`);
+    console.log(`Quadrat ${id} hinzugefügt mit Farbe ${currentColor}`);
   }
 
   // Automatisches Speichern im aktiven Szenario
@@ -131,12 +151,13 @@ export function loadSquares(squares) {
     const polygon = createSquarePolygonFromCorner(gridX, gridY);
     const feature = new ol.Feature(polygon);
     feature.setId(id);
+    feature.set('colorId', color || DEFAULT_COLOR_ID);
 
     selectedSquaresSource.addFeature(feature);
     selectedSquares[id] = {
       feature: feature,
       visited: true,
-      color: color || 'red'
+      color: color || DEFAULT_COLOR_ID
     };
   });
 

@@ -32,3 +32,17 @@ export const PIXELKARTE_CONFIG = {
   attributionUrl: "https://www.swisstopo.admin.ch/",
   label: "Pixelkarte"
 };
+
+// Farbpalette für die Quadrat-Auswahl
+// Erweiterbar: einfach ein weiteres Objekt mit neuer ID anhängen.
+export const COLORS = {
+  col1: { label: "Rot",       fill: "rgba(255, 0, 0, 0.3)",   stroke: "rgba(255, 0, 0, 0.7)" },
+  col2: { label: "Dunkelrot", fill: "rgba(139, 0, 0, 0.3)",   stroke: "rgba(139, 0, 0, 0.7)" },
+  col3: { label: "Grau",      fill: "rgba(128, 128, 128, 0.4)", stroke: "rgba(128, 128, 128, 0.7)" },
+  col4: { label: "Gelb",      fill: "rgba(255, 215, 0, 0.3)", stroke: "rgba(255, 215, 0, 0.7)" },
+  col5: { label: "Orange",    fill: "rgba(255, 140, 0, 0.3)", stroke: "rgba(255, 140, 0, 0.7)" },
+  col6: { label: "Blau",      fill: "rgba(0, 153, 255, 0.3)",   stroke: "rgba(0, 0, 255, 0.7)" }
+};
+
+// Standardfarbe, die beim App-Start und beim Laden eines neuen Szenarios aktiv ist
+export const DEFAULT_COLOR_ID = "col1";

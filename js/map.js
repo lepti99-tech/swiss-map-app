@@ -5,7 +5,9 @@ import {
   EXTENT,
   PROJECTION_CODE,
   PROJECTION_DEF,
-  PIXELKARTE_CONFIG
+  PIXELKARTE_CONFIG,
+  COLORS,
+  DEFAULT_COLOR_ID
 } from './config.js';
 
 // Globale Variablen
@@ -67,21 +69,36 @@ function createGridLayer() {
   return gridLayer;
 }
 
+// Vorberechnete Styles pro Farb-ID, damit nicht bei jedem Rendering
+// ein neues Style-Objekt erzeugt werden muss.
+const squareStyles = {};
+function getSquareStyle(colorId) {
+  const colorDef = COLORS[colorId] || COLORS[DEFAULT_COLOR_ID];
+  const key = colorId && COLORS[colorId] ? colorId : DEFAULT_COLOR_ID;
+
+  if (!squareStyles[key]) {
+    squareStyles[key] = new ol.style.Style({
+      fill: new ol.style.Fill({
+        color: colorDef.fill
+      }),
+      stroke: new ol.style.Stroke({
+        color: colorDef.stroke,
+        width: 2
+      })
+    });
+  }
+
+  return squareStyles[key];
+}
+
 // Layer für ausgefüllte Quadrate erstellen
 function createSelectedSquaresLayer() {
   selectedSquaresSource = new ol.source.Vector();
 
   selectedSquaresLayer = new ol.layer.Vector({
     source: selectedSquaresSource,
-    style: new ol.style.Style({
-      fill: new ol.style.Fill({
-        color: "rgba(255, 0, 0, 0.3)" // transparent rot
-      }),
-      stroke: new ol.style.Stroke({
-        color: "rgba(255, 0, 0, 0.7)", // roter Rand
-        width: 2
-      })
-    })
+    // Style-Funktion statt fixem Style: liest die Farb-ID vom Feature
+    style: (feature) => getSquareStyle(feature.get('colorId'))
   });
 
   return selectedSquaresLayer;
