@@ -1,32 +1,32 @@
-// Quadrat-Auswahl und -Verwaltung
+// Square selection and management
 
 import { GRID_SIZE, GRID_ORIGIN, GRID_BOUNDS, DEFAULT_COLOR_ID } from './config.js';
 import { selectedSquaresSource } from './map.js';
 import { updateActiveScenario } from './storage.js';
 
-// Speichert die ausgewählten Quadrate
+// Stores the selected squares
 export const selectedSquares = {};
 
-// Aktuell gewählte Farbe (wird beim Setzen eines neuen Quadrats verwendet)
+// Currently selected color (used when a new square is added)
 let currentColor = DEFAULT_COLOR_ID;
 
-// Setzt die aktuell aktive Farbe (wird von ui.js beim Klick auf einen Farbkreis aufgerufen)
+// Sets the active color (called by ui.js when a color circle is clicked)
 export function setCurrentColor(colorId) {
   currentColor = colorId;
 }
 
-// Gibt die aktuell aktive Farbe zurück (z. B. damit ui.js den Kreis markieren kann)
+// Returns the active color (e.g. so ui.js can highlight the circle)
 export function getCurrentColor() {
   return currentColor;
 }
 
-// Setzt die aktuelle Farbe auf den Standardwert zurück
-// (wird beim Start eines neuen Szenarios und beim Laden eines Szenarios aufgerufen)
+// Resets the current color to the default
+// (called when starting a new scenario and when loading a scenario)
 export function resetCurrentColor() {
   currentColor = DEFAULT_COLOR_ID;
 }
 
-// Berechnet die ID eines Quadrats basierend auf Koordinaten
+// Calculates the ID of a square from coordinates
 export function getSquareId(x, y) {
   const gridX =
     Math.floor((x - GRID_ORIGIN[0]) / GRID_SIZE) * GRID_SIZE + GRID_ORIGIN[0];
@@ -39,7 +39,7 @@ export function getSquareId(x, y) {
   return `${idX}/${idY}`;
 }
 
-// Berechnet die untere linke Ecke eines Quadrats
+// Calculates the lower-left corner of a square
 export function getSquareCoordinates(x, y) {
   const gridX =
     Math.floor((x - GRID_ORIGIN[0]) / GRID_SIZE) * GRID_SIZE + GRID_ORIGIN[0];
@@ -49,7 +49,7 @@ export function getSquareCoordinates(x, y) {
   return [gridX, gridY];
 }
 
-// Berechnet die untere linke Ecke eines Quadrats direkt aus einer ID ("idX/idY")
+// Calculates the lower-left corner of a square directly from an ID ("idX/idY")
 function getSquareCoordinatesFromId(id) {
   const [idX, idY] = id.split('/').map(Number);
   const gridX = idX * 1000;
@@ -57,13 +57,13 @@ function getSquareCoordinatesFromId(id) {
   return [gridX, gridY];
 }
 
-// Erstellt ein Polygon für ein Quadrat (basierend auf Klick-Koordinaten)
+// Creates a polygon for a square (based on click coordinates)
 export function createSquarePolygon(x, y) {
   const [gridX, gridY] = getSquareCoordinates(x, y);
   return createSquarePolygonFromCorner(gridX, gridY);
 }
 
-// Erstellt ein Polygon direkt aus der unteren linken Ecke
+// Creates a polygon directly from the lower-left corner
 function createSquarePolygonFromCorner(gridX, gridY) {
   const coordinates = [
     [
@@ -78,7 +78,7 @@ function createSquarePolygonFromCorner(gridX, gridY) {
   return new ol.geom.Polygon(coordinates);
 }
 
-// Prüft, ob Koordinaten innerhalb der Raster-Grenzen liegen
+// Checks whether coordinates lie within the grid boundaries
 export function isWithinBounds(x, y) {
   const [gridX, gridY] = getSquareCoordinates(x, y);
 
@@ -90,7 +90,7 @@ export function isWithinBounds(x, y) {
   );
 }
 
-// Gibt die aktuelle Auswahl als Array von [id, color]-Paaren zurück
+// Returns the current selection as an array of [id, color] pairs
 function getSquaresAsArray() {
   return Object.keys(selectedSquares).map((id) => [
     id,
@@ -98,22 +98,22 @@ function getSquaresAsArray() {
   ]);
 }
 
-// Schaltet ein Quadrat ein/aus
+// Toggles a square on/off
 export function toggleSquare(x, y) {
   if (!isWithinBounds(x, y)) {
-    return; // Außerhalb der Grenzen, nichts tun
+    return; // Outside the boundaries, do nothing
   }
 
   const id = getSquareId(x, y);
 
   if (selectedSquares[id]) {
-    // Quadrat ist bereits ausgewählt → entfernen
+    // Square is already selected → remove it
     const feature = selectedSquares[id].feature;
     selectedSquaresSource.removeFeature(feature);
     delete selectedSquares[id];
-    console.log(`Quadrat ${id} entfernt`);
+    console.log(`Square ${id} removed`);
   } else {
-    // Quadrat ist noch nicht ausgewählt → hinzufügen, mit aktuell gewählter Farbe
+    // Square is not selected yet → add it with the current color
     const polygon = createSquarePolygon(x, y);
     const feature = new ol.Feature(polygon);
     feature.setId(id);
@@ -125,14 +125,14 @@ export function toggleSquare(x, y) {
       visited: true,
       color: currentColor
     };
-    console.log(`Quadrat ${id} hinzugefügt mit Farbe ${currentColor}`);
+    console.log(`Square ${id} added with color ${currentColor}`);
   }
 
-  // Automatisches Speichern im aktiven Szenario
+  // Automatically save to the active scenario
   updateActiveScenario(getSquaresAsArray());
 }
 
-// Alle Quadrate entfernen (nur visuell/lokal, ohne Speicherung auszulösen)
+// Remove all squares (visual/local only, does not trigger saving)
 export function clearAllSquares() {
   selectedSquaresSource.clear();
   for (let id in selectedSquares) {
@@ -140,10 +140,10 @@ export function clearAllSquares() {
   }
 }
 
-// Lädt eine gegebene Liste von [id, color]-Paaren und stellt sie auf der Karte dar.
-// Wird beim Laden eines Szenarios aufgerufen.
+// Loads a given list of [id, color] pairs and displays them on the map.
+// Called when a scenario is loaded.
 export function loadSquares(squares) {
-  // Zuerst aktuelle Auswahl zurücksetzen
+  // First reset the current selection
   clearAllSquares();
 
   squares.forEach(([id, color]) => {
@@ -161,5 +161,5 @@ export function loadSquares(squares) {
     };
   });
 
-  console.log(`Szenario geladen: ${squares.length} Quadrat(e) dargestellt.`);
+  console.log(`Scenario loaded: ${squares.length} square(s) displayed.`);
 }

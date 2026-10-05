@@ -1,35 +1,36 @@
-// Haupt-Datei: Koordiniert alle Module und startet die App
+// Main file: coordinates all modules and starts the app
 
 import { initMap, map } from './map.js';
 import { setupGridUpdates } from './grid.js';
 import { toggleSquare } from './selection.js';
-import { createMenu } from './ui.js';
+import { createMenu, updateSquareCountDisplay } from './ui.js';
 
-// App initialisieren
+// Initialize app
 function initApp() {
-  console.log("Swiss Map App wird gestartet...");
+  console.log("Swiss Grid App is starting...");
 
-  // Karte initialisieren
+  // Initialize map
   initMap();
 
-  // Raster-Updates einrichten
+  // Set up grid updates
   setupGridUpdates();
  
-  // Menü erstellen
+  // Create menu
   createMenu();
   
-  // Click-Event auf der Karte
+  // Click event on the map
   map.on("click", function (event) {
     const coordinate = event.coordinate;
     const [x, y] = coordinate;
 
     toggleSquare(x, y);
+    updateSquareCountDisplay();
   });
 
-  console.log("Swiss Map App erfolgreich gestartet!");
+  console.log("Swiss Grid App started successfully!");
 }
 
-// App starten, sobald das DOM geladen ist
+// Start app as soon as the DOM is loaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
 } else {

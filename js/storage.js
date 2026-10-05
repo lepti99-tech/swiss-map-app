@@ -1,6 +1,6 @@
 // storage.js
-// Verwaltung der Szenarien via localStorage.
-// Datenstruktur:
+// Scenario management via localStorage.
+// Data structure:
 // localStorage["swissGridScenarios"] = {
 //   "<name>": {
 //     squares: [ [id, color], [id, color], ... ]
@@ -10,13 +10,13 @@
 
 const STORAGE_KEY = "swissGridScenarios";
 
-// Name des aktuell aktiven Szenarios. null = kein Szenario aktiv (neutraler Startzustand).
+// Name of the active scenario. null = no scenario active (neutral start state).
 let activeScenarioName = null;
 
 /**
- * Liest das gesamte Szenarien-Objekt aus dem localStorage.
- * Gibt ein leeres Objekt zurück, falls noch nichts gespeichert ist
- * oder die gespeicherten Daten fehlerhaft sind.
+ * Reads the whole scenarios object from localStorage.
+ * Returns an empty object if nothing has been saved yet
+ * or if the saved data is invalid.
  */
 function readAllScenarios() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -25,27 +25,27 @@ function readAllScenarios() {
     const parsed = JSON.parse(raw);
     return typeof parsed === "object" && parsed !== null ? parsed : {};
   } catch (e) {
-    console.error("Fehler beim Lesen der Szenarien aus localStorage:", e);
+    console.error("Error reading scenarios from localStorage:", e);
     return {};
   }
 }
 
 /**
- * Schreibt das gesamte Szenarien-Objekt zurück in den localStorage.
+ * Writes the whole scenarios object back to localStorage.
  */
 function writeAllScenarios(scenarios) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(scenarios));
 }
 
 /**
- * Gibt den Namen des aktuell aktiven Szenarios zurück (oder null).
+ * Returns the name of the active scenario (or null).
  */
 export function getActiveScenarioName() {
   return activeScenarioName;
 }
 
 /**
- * Liefert eine Liste aller vorhandenen Szenario-Namen (z. B. für ein Load-Dropdown).
+ * Returns a list of all existing scenario names (e.g. for a load list).
  */
 export function listScenarios() {
   const scenarios = readAllScenarios();
@@ -53,15 +53,15 @@ export function listScenarios() {
 }
 
 /**
- * Legt ein neues, leeres Szenario mit dem angegebenen Namen an und setzt es aktiv.
- * Gibt { success: true } zurück bei Erfolg,
- * oder { success: false, error: "..." } bei einem Namenskonflikt.
+ * Creates a new, empty scenario with the given name and makes it active.
+ * Returns { success: true } on success,
+ * or { success: false, error: "..." } if the name already exists.
  */
 export function saveScenario(name) {
   const trimmedName = name.trim();
 
   if (!trimmedName) {
-    return { success: false, error: "Bitte einen gültigen Namen eingeben." };
+    return { success: false, error: "Please enter a valid name." };
   }
 
   const scenarios = readAllScenarios();
@@ -69,7 +69,7 @@ export function saveScenario(name) {
   if (Object.prototype.hasOwnProperty.call(scenarios, trimmedName)) {
     return {
       success: false,
-      error: `Ein Szenario mit dem Namen "${trimmedName}" existiert bereits.`,
+      error: `A scenario named "${trimmedName}" already exists.`,
     };
   }
 
@@ -82,16 +82,16 @@ export function saveScenario(name) {
 }
 
 /**
- * Lädt ein bestehendes Szenario und setzt es aktiv.
- * Gibt die gespeicherten Quadrate ([[id, color], ...]) zurück, damit die UI
- * die Auswahl auf der Karte entsprechend darstellen kann.
- * Gibt { success: false, error: "..." } zurück, falls das Szenario nicht existiert.
+ * Loads an existing scenario and makes it active.
+ * Returns the saved squares ([[id, color], ...]) so the UI
+ * can display the selection on the map.
+ * Returns { success: false, error: "..." } if the scenario does not exist.
  */
 export function loadScenario(name) {
   const scenarios = readAllScenarios();
 
   if (!Object.prototype.hasOwnProperty.call(scenarios, name)) {
-    return { success: false, error: `Szenario "${name}" wurde nicht gefunden.` };
+    return { success: false, error: `Scenario "${name}" was not found.` };
   }
 
   activeScenarioName = name;
@@ -100,16 +100,16 @@ export function loadScenario(name) {
 }
 
 /**
- * Löscht ein Szenario.
- * Falls es das aktuell aktive Szenario ist, wird auf den neutralen Zustand
- * zurückgesetzt (kein aktives Szenario mehr).
- * Gibt { success: false, error: "..." } zurück, falls das Szenario nicht existiert.
+ * Deletes a scenario.
+ * If it is the active scenario, the app returns to the neutral state
+ * (no active scenario).
+ * Returns { success: false, error: "..." } if the scenario does not exist.
  */
 export function deleteScenario(name) {
   const scenarios = readAllScenarios();
 
   if (!Object.prototype.hasOwnProperty.call(scenarios, name)) {
-    return { success: false, error: `Szenario "${name}" wurde nicht gefunden.` };
+    return { success: false, error: `Scenario "${name}" was not found.` };
   }
 
   delete scenarios[name];
@@ -123,10 +123,10 @@ export function deleteScenario(name) {
 }
 
 /**
- * Aktualisiert die Quadrat-Liste des aktuell aktiven Szenarios und speichert
- * sie automatisch im localStorage. Wird bei jedem Toggle eines Quadrats aufgerufen.
- * squares: Array von [id, color]-Paaren, das den aktuellen Auswahlzustand widerspiegelt.
- * Macht nichts, falls kein Szenario aktiv ist.
+ * Updates the square list of the active scenario and saves it
+ * automatically to localStorage. Called every time a square is toggled.
+ * squares: array of [id, color] pairs reflecting the current selection.
+ * Does nothing if no scenario is active.
  */
 export function updateActiveScenario(squares) {
   if (!activeScenarioName) return;
@@ -134,8 +134,8 @@ export function updateActiveScenario(squares) {
   const scenarios = readAllScenarios();
 
   if (!Object.prototype.hasOwnProperty.call(scenarios, activeScenarioName)) {
-    // Sollte im Normalfall nicht vorkommen, aber zur Sicherheit:
-    console.warn(`Aktives Szenario "${activeScenarioName}" nicht in localStorage gefunden.`);
+    // Should not normally happen, but just in case:
+    console.warn(`Active scenario "${activeScenarioName}" not found in localStorage.`);
     return;
   }
 

@@ -1,6 +1,13 @@
 body {
   margin: 0;
   padding: 0;
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+}
+
+/* Buttons and inputs do not inherit the page font by default */
+button,
+input {
+  font-family: inherit;
 }
 
 .map {
@@ -22,5 +29,5 @@ button {
 }
 
 button:hover {
-    background-color: #6a6a6a; /* Helle Farbe bei Hover */
+    background-color: #6a6a6a; /* Lighter color on hover */
 }

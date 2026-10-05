@@ -1,4 +1,4 @@
-// Karten-Initialisierung und Layer-Verwaltung
+// Map initialization and layer management
 
 import {
   RESOLUTIONS,
@@ -10,14 +10,14 @@ import {
   DEFAULT_COLOR_ID
 } from './config.js';
 
-// Globale Variablen
+// Global variables
 export let map;
 export let gridSource;
 export let gridLayer;
 export let selectedSquaresSource;
 export let selectedSquaresLayer;
 
-// Projektion registrieren
+// Register projection
 function setupProjection() {
   const olProj4 = ol.proj.proj4;
   proj4.defs(PROJECTION_CODE, PROJECTION_DEF);
@@ -28,7 +28,7 @@ function setupProjection() {
   return projection;
 }
 
-// WMTS Layer erstellen
+// Create WMTS layer
 function createWMTSLayer(layerConfig, projection) {
   const matrixIds = RESOLUTIONS.map((_, i) => i.toString());
 
@@ -52,7 +52,7 @@ function createWMTSLayer(layerConfig, projection) {
   });
 }
 
-// Raster-Layer erstellen
+// Create grid layer
 function createGridLayer() {
   gridSource = new ol.source.Vector();
 
@@ -60,7 +60,7 @@ function createGridLayer() {
     source: gridSource,
     style: new ol.style.Style({
       stroke: new ol.style.Stroke({
-        color: "rgba(0, 0, 139, 0.7)", // dunkelblau
+        color: "rgba(0, 0, 139, 0.7)", // dark blue
         width: 1.5
       })
     })
@@ -69,8 +69,8 @@ function createGridLayer() {
   return gridLayer;
 }
 
-// Vorberechnete Styles pro Farb-ID, damit nicht bei jedem Rendering
-// ein neues Style-Objekt erzeugt werden muss.
+// Precomputed styles per color ID, so that no new style object
+// has to be created on every render.
 const squareStyles = {};
 function getSquareStyle(colorId) {
   const colorDef = COLORS[colorId] || COLORS[DEFAULT_COLOR_ID];
@@ -91,20 +91,20 @@ function getSquareStyle(colorId) {
   return squareStyles[key];
 }
 
-// Layer für ausgefüllte Quadrate erstellen
+// Create layer for filled squares
 function createSelectedSquaresLayer() {
   selectedSquaresSource = new ol.source.Vector();
 
   selectedSquaresLayer = new ol.layer.Vector({
     source: selectedSquaresSource,
-    // Style-Funktion statt fixem Style: liest die Farb-ID vom Feature
+    // Style function instead of a fixed style: reads the color ID from the feature
     style: (feature) => getSquareStyle(feature.get('colorId'))
   });
 
   return selectedSquaresLayer;
 }
 
-// Karte initialisieren
+// Initialize map
 export function initMap() {
   const projection = setupProjection();
   const wmtsLayer = createWMTSLayer(PIXELKARTE_CONFIG, projection);

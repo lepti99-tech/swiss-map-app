@@ -1,9 +1,9 @@
-// Raster-Zeichnung und -Aktualisierung
+// Grid drawing and updating
 
 import { GRID_SIZE, GRID_ORIGIN, GRID_BOUNDS } from './config.js';
 import { map, gridSource } from './map.js';
 
-// Raster aktualisieren basierend auf View
+// Update grid based on the current view
 export function updateGrid() {
   gridSource.clear();
 
@@ -13,20 +13,20 @@ export function updateGrid() {
   const [minX, minY, maxX, maxY] = extent;
   const [originX, originY] = GRID_ORIGIN;
 
-  // Startlinien berechnen (links/unten vom View)
+  // Calculate start lines (left/bottom of the view)
   let startX =
     originX + Math.floor((minX - originX) / GRID_SIZE) * GRID_SIZE;
 
   let startY =
     originY + Math.floor((minY - originY) / GRID_SIZE) * GRID_SIZE;
 
-  // Endpunkte berechnen
+  // Calculate end points
   let endX = maxX;
   let endY = maxY;
 
-  // Vertikale Linien (nur innerhalb der Grenzen)
+  // Vertical lines (only within the boundaries)
   for (let x = startX; x <= endX; x += GRID_SIZE) {
-    // Nur Linien zeichnen, die innerhalb der definierten Grenzen liegen
+    // Only draw lines that lie within the defined boundaries
     if (x >= GRID_BOUNDS.minX && x <= GRID_BOUNDS.maxX) {
       const line = new ol.geom.LineString([
         [x, Math.max(minY, GRID_BOUNDS.minY)],
@@ -36,9 +36,9 @@ export function updateGrid() {
     }
   }
 
-  // Horizontale Linien (nur innerhalb der Grenzen)
+  // Horizontal lines (only within the boundaries)
   for (let y = startY; y <= endY; y += GRID_SIZE) {
-    // Nur Linien zeichnen, die innerhalb der definierten Grenzen liegen
+    // Only draw lines that lie within the defined boundaries
     if (y >= GRID_BOUNDS.minY && y <= GRID_BOUNDS.maxY) {
       const line = new ol.geom.LineString([
         [Math.max(minX, GRID_BOUNDS.minX), y],
@@ -49,11 +49,11 @@ export function updateGrid() {
   }
 }
 
-// Event-Listener für Raster-Updates registrieren
+// Register event listener for grid updates
 export function setupGridUpdates() {
   map.getView().on("change:resolution", updateGrid);
   map.getView().on("change:center", updateGrid);
   
-  // Initiales Raster zeichnen
+  // Draw initial grid
   updateGrid();
 }
