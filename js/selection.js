@@ -91,17 +91,18 @@ export function isWithinBounds(x, y) {
 }
 
 // Returns the current selection as an array of [id, color] pairs
-function getSquaresAsArray() {
+export function getSquaresAsArray() {
   return Object.keys(selectedSquares).map((id) => [
     id,
     selectedSquares[id].color || DEFAULT_COLOR_ID
   ]);
 }
 
-// Toggles a square on/off
+// Toggles a square on/off.
+// Returns true if a square was added or removed, false if the click was outside the grid.
 export function toggleSquare(x, y) {
   if (!isWithinBounds(x, y)) {
-    return; // Outside the boundaries, do nothing
+    return false; // Outside the boundaries, do nothing
   }
 
   const id = getSquareId(x, y);
@@ -128,6 +129,7 @@ export function toggleSquare(x, y) {
 
   // Automatically save to the active scenario
   updateActiveScenario(getSquaresAsArray());
+  return true;
 }
 
 // Remove all squares (visual/local only, does not trigger saving)

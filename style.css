@@ -6,7 +6,8 @@ body {
 
 /* Buttons and inputs do not inherit the page font by default */
 button,
-input {
+input,
+select {
   font-family: inherit;
 }
 
@@ -64,6 +65,28 @@ button {
 .menu-status {
   font-size: 13px;
   font-style: italic;
+}
+
+.menu-scenario-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+/* Small pencil button for renaming */
+.icon-button {
+  width: auto;
+  padding: 0 4px;
+  margin: 0 0 0 4px;
+  background-color: transparent;
+  color: #333333;
+  font-size: 13px;
+  line-height: 1.3;
+  border-radius: 3px;
+}
+
+.icon-button:hover {
+  background-color: #b8b8b8;
 }
 
 .menu-status-last {
@@ -160,6 +183,7 @@ button {
   min-width: 250px;
   max-height: 70vh;
   overflow-y: auto;
+  max-width: 400px;
   padding: 20px;
   background-color: white;
   border-radius: 6px;
@@ -178,6 +202,25 @@ button {
 
 .popup-small {
   font-size: 13px;
+}
+
+.popup-select {
+  padding: 5px;
+  font-size: 14px;
+}
+
+/* File name shown in the download pop-up */
+.popup-filename {
+  margin-bottom: 12px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+/* Thin line between "saved in browser" and "upload from file" */
+.popup-separator {
+  border-top: 1px solid #cccccc;
+  margin: 16px 0 12px 0;
 }
 
 .popup-input {

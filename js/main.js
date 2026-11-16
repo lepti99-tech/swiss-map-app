@@ -3,7 +3,7 @@
 import { initMap, map } from './map.js';
 import { setupGridUpdates } from './grid.js';
 import { toggleSquare } from './selection.js';
-import { createMenu, updateSquareCountDisplay } from './ui.js';
+import { createMenu, updateSquareCountDisplay, showNoScenarioHintOnce } from './ui.js';
 
 // Initialize app
 function initApp() {
@@ -21,8 +21,10 @@ function initApp() {
     const coordinate = event.coordinate;
     const [x, y] = coordinate;
 
-    toggleSquare(x, y);
-    updateSquareCountDisplay();
+    if (toggleSquare(x, y)) {
+      updateSquareCountDisplay();
+      showNoScenarioHintOnce(); // only shown if no scenario is active
+    }
   });
 }
 

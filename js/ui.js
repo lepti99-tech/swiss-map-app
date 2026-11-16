@@ -2,14 +2,23 @@
 // User menu management (buttons, pop-ups).
 // All styling lives in style.css; this file only builds the elements and assigns CSS classes.
 
-import { saveScenario, getActiveScenarioName, listScenarios, loadScenario, deleteScenario } from './storage.js';
-import { loadSquares, setCurrentColor, getCurrentColor, resetCurrentColor, selectedSquares } from './selection.js';
+import {
+    saveScenario, getActiveScenarioName, listScenarios, loadScenario,
+    deleteScenario, renameScenario, scenarioExists
+} from './storage.js';
+import {
+    loadSquares, setCurrentColor, getCurrentColor, resetCurrentColor,
+    selectedSquares, getSquaresAsArray
+} from './selection.js';
+import { downloadScenario, getDownloadFileName, parseScenarioFile } from './fileio.js';
 import { COLORS } from './config.js';
 
 // Module variables: references to elements that are updated later
 let activeScenarioDisplay = null;
+let renameButton = null;         // Pencil button next to the active scenario
 let squareCountDisplay = null;   // Display of the number of selected squares
 let colorCircleElements = {};    // colorId -> DOM element, for the active highlight
+let noScenarioHintShown = false; // Hint "no active scenario" is shown once per page load
 
 // ---------------------------------------------------------
 // Small helpers for creating elements
@@ -28,6 +37,24 @@ function createButton(text, className, onClick) {
     const button = createElement('button', className, text);
     button.onclick = onClick;
     return button;
+}
+
+// Creates a text input, optionally pre-filled
+function createTextInput(value = '') {
+    const input = createElement('input', 'popup-input');
+    input.type = 'text';
+    input.value = value;
+    return input;
+}
+
+// Number of currently selected squares
+function getSquareCount() {
+    return Object.keys(selectedSquares).length;
+}
+
+// "1 square" / "5 squares"
+function squaresText(count) {
+    return count === 1 ? '1 square' : `${count} squares`;
 }
 
 // ---------------------------------------------------------
@@ -74,14 +101,30 @@ function createButtonRow(...buttons) {
     return row;
 }
 
+// Simple pop-up with a message and an OK button
+function openMessagePopup(message) {
+    const { box, close } = openPopup();
+    box.appendChild(createElement('div', 'popup-text', message));
+    const okButton = createButton('OK', 'btn-dark', close);
+    box.appendChild(okButton);
+    okButton.focus();
+}
+
 // Resets the map and the menu after switching scenarios
-// (new, loaded or deleted scenario)
+// (new, loaded, uploaded or deleted scenario)
 function showSquares(squares) {
     loadSquares(squares);
     resetCurrentColor();
     updateColorSelectionDisplay();
     updateActiveScenarioDisplay();
     updateSquareCountDisplay();
+}
+
+// Enter key in a text field triggers the given button
+function submitOnEnter(input, button) {
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') button.click();
+    });
 }
 
 // ---------------------------------------------------------
@@ -96,9 +139,15 @@ export function createMenu() {
     // Info button in the top-right corner
     createInfoButton(menu);
 
-    // Display of the active scenario
+    // Display of the active scenario, with pencil button for renaming
+    const scenarioRow = createElement('div', 'menu-scenario-row');
     activeScenarioDisplay = createElement('div', 'menu-status');
-    menu.appendChild(activeScenarioDisplay);
+    renameButton = createButton('✎', 'icon-button', openRenameScenarioPopup);
+    renameButton.title = 'Rename scenario';
+    renameButton.setAttribute('aria-label', 'Rename scenario');
+    scenarioRow.appendChild(activeScenarioDisplay);
+    scenarioRow.appendChild(renameButton);
+    menu.appendChild(scenarioRow);
     updateActiveScenarioDisplay();
 
     // Display of the number of selected squares
@@ -109,6 +158,7 @@ export function createMenu() {
     // Scenario buttons
     menu.appendChild(createButton('Start new scenario', 'btn-dark menu-button', openNewScenarioPopup));
     menu.appendChild(createButton('Load existing scenario', 'btn-dark menu-button', openLoadScenarioPopup));
+    menu.appendChild(createButton('Download scenario', 'btn-dark menu-button', openDownloadPopup));
     menu.appendChild(createButton('Delete active scenario', 'btn-dark menu-button', openDeleteScenarioPopup));
 
     // Color palette
@@ -136,7 +186,7 @@ export function createMenu() {
 }
 
 // ---------------------------------------------------------
-// Update the active scenario display
+// Update the active scenario display (and show the pencil only if a scenario is active)
 // ---------------------------------------------------------
 
 function updateActiveScenarioDisplay() {
@@ -146,6 +196,7 @@ function updateActiveScenarioDisplay() {
     activeScenarioDisplay.innerText = activeName
         ? `Active scenario: ${activeName}`
         : 'Active scenario: –';
+    renameButton.hidden = !activeName;
 }
 
 // ---------------------------------------------------------
@@ -156,8 +207,23 @@ function updateActiveScenarioDisplay() {
 export function updateSquareCountDisplay() {
     if (!squareCountDisplay) return;
 
-    const count = Object.keys(selectedSquares).length;
-    squareCountDisplay.innerText = `Selected squares: ${count}`;
+    squareCountDisplay.innerText = `Selected squares: ${getSquareCount()}`;
+}
+
+// ---------------------------------------------------------
+// Hint when squares are selected without an active scenario.
+// Called by main.js after a square was toggled; shown once per page load.
+// ---------------------------------------------------------
+
+export function showNoScenarioHintOnce() {
+    if (noScenarioHintShown || getActiveScenarioName()) return;
+    noScenarioHintShown = true;
+
+    openMessagePopup(
+        'No active scenario. Your selection will not be saved.\n\n' +
+        'To save it, click "Start new scenario" – your current selection will be ' +
+        'taken over. Or use "Download scenario" to save it as a file.'
+    );
 }
 
 // ---------------------------------------------------------
@@ -177,8 +243,10 @@ function createInfoButton(menu) {
             <li>Click a square to color it; click again to remove it.</li>
             <li>Choose a color from the color scheme before clicking.</li>
             <li>Start a new scenario to save your squares under a name. Changes are saved automatically.</li>
-            <li>Load or delete scenarios at any time.</li>
-            <li>Your scenarios are stored only in this browser on this device.</li>
+            <li>Load, rename (✎) or delete scenarios at any time.</li>
+            <li>Your scenarios are stored only in this browser on this device.
+                Use "Download scenario" to keep a copy as a file, and
+                "Load existing scenario" → "Upload from file" to load it again.</li>
         </ul>`;
 
     infoButton.onmouseenter = () => { infoBox.hidden = false; };
@@ -208,16 +276,23 @@ function updateColorSelectionDisplay() {
 
 // ---------------------------------------------------------
 // Pop-up: new scenario
+// Without an active scenario, the current selection is taken over into the new scenario.
+// With an active scenario, the new scenario starts empty.
 // ---------------------------------------------------------
 
 function openNewScenarioPopup() {
+    const takeOverSelection = !getActiveScenarioName() && getSquareCount() > 0;
     const { box, close } = openPopup();
 
     box.appendChild(createElement('label', 'popup-label', 'Name of the new scenario:'));
 
-    const input = createElement('input', 'popup-input');
-    input.type = 'text';
+    const input = createTextInput();
     box.appendChild(input);
+
+    if (takeOverSelection) {
+        box.appendChild(createElement('div', 'popup-text popup-small',
+            `Your current selection (${squaresText(getSquareCount())}) will be saved in the new scenario.`));
+    }
 
     const errorMsg = createErrorMessage();
     box.appendChild(errorMsg);
@@ -230,68 +305,247 @@ function openNewScenarioPopup() {
             return;
         }
 
-        const result = saveScenario(name);
+        const squares = takeOverSelection ? getSquaresAsArray() : [];
+        const result = saveScenario(name, squares);
 
         if (!result.success) {
             errorMsg.innerText = result.error;
             return;
         }
 
-        // New scenario starts empty
-        showSquares([]);
+        if (takeOverSelection) {
+            // Squares stay on the map, only the menu changes
+            updateActiveScenarioDisplay();
+            updateSquareCountDisplay();
+        } else {
+            // New scenario starts empty
+            showSquares([]);
+        }
         close();
     });
 
     const cancelButton = createButton('Cancel', 'btn-dark', close);
 
     box.appendChild(createButtonRow(saveButton, cancelButton));
-
-    // Enter key in the text field triggers Save
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') saveButton.click();
-    });
-
-    // Put focus directly into the text field
+    submitOnEnter(input, saveButton);
     input.focus();
 }
 
 // ---------------------------------------------------------
-// Pop-up: load existing scenario
+// Pop-up: rename the active scenario (pencil button)
 // ---------------------------------------------------------
 
-function openLoadScenarioPopup() {
-    const scenarioNames = listScenarios();
+function openRenameScenarioPopup() {
+    const activeName = getActiveScenarioName();
+    if (!activeName) return;
+
     const { box, close } = openPopup();
 
-    box.appendChild(createElement('label', 'popup-label', 'Select a scenario:'));
+    box.appendChild(createElement('label', 'popup-label', 'New name for the scenario:'));
+
+    const input = createTextInput(activeName);
+    box.appendChild(input);
 
     const errorMsg = createErrorMessage();
     box.appendChild(errorMsg);
 
+    const saveButton = createButton('Save', 'btn-dark', () => {
+        const result = renameScenario(activeName, input.value);
+
+        if (!result.success) {
+            errorMsg.innerText = result.error;
+            return;
+        }
+
+        updateActiveScenarioDisplay();
+        close();
+    });
+
+    const cancelButton = createButton('Cancel', 'btn-dark', close);
+
+    box.appendChild(createButtonRow(saveButton, cancelButton));
+    submitOnEnter(input, saveButton);
+    input.focus();
+    input.select();
+}
+
+// ---------------------------------------------------------
+// Pop-up: download the active scenario (or the unsaved selection) as a file
+// ---------------------------------------------------------
+
+function openDownloadPopup() {
+    const activeName = getActiveScenarioName();
+    const count = getSquareCount();
+
+    if (!activeName && count === 0) {
+        openMessagePopup('There is nothing to download. Select squares or load a scenario first.');
+        return;
+    }
+
+    const { box, close } = openPopup();
+
+    const intro = activeName
+        ? `The scenario "${activeName}" (${squaresText(count)}) will be saved as a file in your download folder:`
+        : `No scenario is active. The current selection (${squaresText(count)}) will be saved as a file in your download folder:`;
+    box.appendChild(createElement('div', 'popup-label', intro));
+    box.appendChild(createElement('div', 'popup-filename', getDownloadFileName(activeName)));
+    box.appendChild(createElement('div', 'popup-text popup-small',
+        'You can load the file again later via "Load existing scenario" → "Upload from file".'));
+
+    const downloadButton = createButton('Download', 'btn-dark', () => {
+        downloadScenario(activeName, getSquaresAsArray());
+        close();
+    });
+    const cancelButton = createButton('Cancel', 'btn-dark', close);
+
+    box.appendChild(createButtonRow(downloadButton, cancelButton));
+    downloadButton.focus();
+}
+
+// ---------------------------------------------------------
+// Pop-up: load a scenario from this browser (dropdown) or from a file (upload)
+// ---------------------------------------------------------
+
+function openLoadScenarioPopup() {
+    const scenarioNames = listScenarios().sort((a, b) => a.localeCompare(b));
+    const { box, close } = openPopup();
+
+    // Part 1: scenarios saved in this browser
+    box.appendChild(createElement('label', 'popup-label', 'Scenarios saved in this browser:'));
+
+    const errorMsg = createErrorMessage();
+
     if (scenarioNames.length === 0) {
         box.appendChild(createElement('div', 'popup-text popup-small', 'There are no saved scenarios yet.'));
     } else {
-        const list = createElement('div', 'popup-list');
-
+        const select = createElement('select', 'popup-select');
         scenarioNames.forEach((name) => {
-            list.appendChild(createButton(name, 'popup-list-item', () => {
-                const result = loadScenario(name);
-
-                if (!result.success) {
-                    errorMsg.innerText = result.error;
-                    return;
-                }
-
-                // Display the saved squares on the map
-                showSquares(result.squares);
-                close();
-            }));
+            const option = createElement('option', null, name);
+            option.value = name;
+            select.appendChild(option);
         });
 
-        box.appendChild(list);
+        // Pre-select the active scenario, if any
+        const activeName = getActiveScenarioName();
+        if (activeName && scenarioNames.includes(activeName)) {
+            select.value = activeName;
+        }
+
+        box.appendChild(select);
+
+        const loadButton = createButton('Load selected scenario', 'btn-dark', () => {
+            const result = loadScenario(select.value);
+
+            if (!result.success) {
+                errorMsg.innerText = result.error;
+                return;
+            }
+
+            showSquares(result.squares);
+            close();
+        });
+        box.appendChild(loadButton);
+        select.focus();
     }
 
+    // Part 2: upload from a file
+    box.appendChild(createElement('div', 'popup-separator'));
+    box.appendChild(createElement('label', 'popup-label', 'Or load a downloaded scenario file (.json):'));
+
+    const fileInput = createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json,application/json';
+    fileInput.hidden = true;
+    box.appendChild(fileInput);
+
+    const uploadButton = createButton('Upload from file', 'btn-dark', () => {
+        errorMsg.innerText = '';
+        fileInput.click();
+    });
+    box.appendChild(uploadButton);
+
+    fileInput.onchange = async () => {
+        const file = fileInput.files[0];
+        fileInput.value = ''; // allows choosing the same file again
+        if (!file) return;
+
+        let text;
+        try {
+            text = await file.text();
+        } catch (e) {
+            errorMsg.innerText = 'The file could not be read.';
+            return;
+        }
+
+        const parsed = parseScenarioFile(text, file.name);
+        if (!parsed.success) {
+            errorMsg.innerText = parsed.error;
+            return;
+        }
+
+        if (scenarioExists(parsed.name)) {
+            // Name conflict: ask for a different name in the same pop-up
+            showUploadNameConflict(box, close, parsed);
+            return;
+        }
+
+        saveUploadedScenario(parsed.name, parsed.squares, errorMsg, close);
+    };
+
+    box.appendChild(errorMsg);
     box.appendChild(createButton('Cancel', 'btn-dark', close));
+}
+
+// Saves an uploaded scenario in the browser, makes it active and shows it
+function saveUploadedScenario(name, squares, errorMsg, close) {
+    const result = saveScenario(name, squares);
+
+    if (!result.success) {
+        errorMsg.innerText = result.error;
+        return;
+    }
+
+    showSquares(squares);
+    close();
+}
+
+// Suggests a free name: "Name (2)", "Name (3)", ...
+function suggestFreeName(baseName) {
+    let number = 2;
+    while (scenarioExists(`${baseName} (${number})`)) {
+        number++;
+    }
+    return `${baseName} (${number})`;
+}
+
+// Replaces the content of the load pop-up with the name conflict form
+function showUploadNameConflict(box, close, parsed) {
+    box.replaceChildren();
+
+    box.appendChild(createElement('div', 'popup-text',
+        `A scenario named "${parsed.name}" already exists in this browser. ` +
+        'Two scenarios cannot have the same name.'));
+    box.appendChild(createElement('label', 'popup-label', 'Name for the uploaded scenario:'));
+
+    const input = createTextInput(suggestFreeName(parsed.name));
+    box.appendChild(input);
+
+    const errorMsg = createErrorMessage();
+    box.appendChild(errorMsg);
+
+    const saveButton = createButton('Save', 'btn-dark', () => {
+        if (input.value.trim() === '') {
+            errorMsg.innerText = 'Please enter a name.';
+            return;
+        }
+        saveUploadedScenario(input.value.trim(), parsed.squares, errorMsg, close);
+    });
+    const cancelButton = createButton('Cancel', 'btn-dark', close);
+
+    box.appendChild(createButtonRow(saveButton, cancelButton));
+    submitOnEnter(input, saveButton);
+    input.focus();
+    input.select();
 }
 
 // ---------------------------------------------------------
@@ -300,14 +554,14 @@ function openLoadScenarioPopup() {
 
 function openDeleteScenarioPopup() {
     const activeName = getActiveScenarioName();
-    const { box, close } = openPopup();
 
     // No active scenario: say so right away instead of asking for confirmation
     if (!activeName) {
-        box.appendChild(createElement('div', 'popup-text', 'No scenario is active.'));
-        box.appendChild(createButton('OK', 'btn-dark', close));
+        openMessagePopup('No scenario is active.');
         return;
     }
+
+    const { box, close } = openPopup();
 
     box.appendChild(createElement('label', 'popup-text', `Do you want to delete the scenario "${activeName}"?`));
 

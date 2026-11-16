@@ -53,11 +53,20 @@ export function listScenarios() {
 }
 
 /**
- * Creates a new, empty scenario with the given name and makes it active.
- * Returns { success: true } on success,
- * or { success: false, error: "..." } if the name already exists.
+ * Returns true if a scenario with this name exists.
  */
-export function saveScenario(name) {
+export function scenarioExists(name) {
+  return Object.prototype.hasOwnProperty.call(readAllScenarios(), name.trim());
+}
+
+/**
+ * Creates a new scenario with the given name and makes it active.
+ * squares: optional initial list of [id, color] pairs (e.g. an uploaded file
+ * or a selection made before the scenario existed). Default: empty.
+ * Returns { success: true, name } on success,
+ * or { success: false, error: "..." } if the name is empty or already exists.
+ */
+export function saveScenario(name, squares = []) {
   const trimmedName = name.trim();
 
   if (!trimmedName) {
@@ -73,12 +82,60 @@ export function saveScenario(name) {
     };
   }
 
-  scenarios[trimmedName] = { squares: [] };
+  scenarios[trimmedName] = { squares: squares };
   writeAllScenarios(scenarios);
 
   activeScenarioName = trimmedName;
 
-  return { success: true };
+  return { success: true, name: trimmedName };
+}
+
+/**
+ * Renames a scenario. The position in the stored list stays the same.
+ * If it is the active scenario, it stays active under the new name.
+ * Returns { success: true, name } or { success: false, error: "..." }.
+ */
+export function renameScenario(oldName, newName) {
+  const trimmedName = newName.trim();
+
+  if (!trimmedName) {
+    return { success: false, error: "Please enter a valid name." };
+  }
+
+  const scenarios = readAllScenarios();
+
+  if (!Object.prototype.hasOwnProperty.call(scenarios, oldName)) {
+    return { success: false, error: `Scenario "${oldName}" was not found.` };
+  }
+
+  // Same name: nothing to do
+  if (trimmedName === oldName) {
+    return { success: true, name: trimmedName };
+  }
+
+  if (Object.prototype.hasOwnProperty.call(scenarios, trimmedName)) {
+    return {
+      success: false,
+      error: `A scenario named "${trimmedName}" already exists.`,
+    };
+  }
+
+  // Rebuild the object so the renamed scenario keeps its position
+  const renamed = {};
+  Object.keys(scenarios).forEach((key) => {
+    if (key === oldName) {
+      renamed[trimmedName] = scenarios[key];
+    } else {
+      renamed[key] = scenarios[key];
+    }
+  });
+  writeAllScenarios(renamed);
+
+  if (activeScenarioName === oldName) {
+    activeScenarioName = trimmedName;
+  }
+
+  return { success: true, name: trimmedName };
 }
 
 /**
