@@ -38,7 +38,7 @@ export const PIXELKARTE_CONFIG = {
 export const COLORS = {
   col1: { label: "Red",       fill: "rgba(255, 0, 0, 0.3)",   stroke: "rgba(255, 0, 0, 0.7)" },
   col2: { label: "Dark red",  fill: "rgba(139, 0, 0, 0.3)",   stroke: "rgba(139, 0, 0, 0.7)" },
-  col3: { label: "Grey",      fill: "rgba(128, 128, 128, 0.4)", stroke: "rgba(128, 128, 128, 0.7)" },
+  col3: { label: "Grey",      fill: "rgba(100, 100, 100, 0.5)", stroke: "rgba(100, 100, 100, 0.7)" },
   col4: { label: "Yellow",    fill: "rgba(255, 215, 0, 0.3)", stroke: "rgba(255, 215, 0, 0.7)" },
   col5: { label: "Orange",    fill: "rgba(255, 140, 0, 0.3)", stroke: "rgba(255, 140, 0, 0.7)" },
   col6: { label: "Blue",      fill: "rgba(0, 153, 255, 0.3)",   stroke: "rgba(0, 0, 255, 0.7)" }
