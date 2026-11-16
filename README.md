@@ -10,12 +10,36 @@ An interactive map of Switzerland with a grid of 4 × 4 km squares. Click square
 - Click a square to color it; click again to remove it
 - Six colors to choose from
 - Counter showing how many squares are selected
-- Scenarios: save your squares under a name, then load or delete them later
+- Scenarios: save your squares under a name, then load, rename or delete them later
 - Changes to the active scenario are saved automatically
+- Squares selected without a scenario can be taken over into a new scenario
+- Download a scenario as a JSON file and upload it again later (also in another browser or on another device)
 
 ## Privacy and storage
 
 Scenarios are stored only in your own browser (`localStorage`). Nothing is sent to a server, and other users cannot see your scenarios. Clearing your browser data deletes them.
+
+To keep a backup, or to move a scenario to another browser or device, use **Download scenario** and later **Load existing scenario → Upload from file**.
+
+## Scenario file format
+
+Downloaded scenarios are JSON files:
+
+```json
+{
+  "app": "swiss-grid-app",
+  "formatVersion": 1,
+  "name": "My scenario",
+  "gridSize": 4000,
+  "exportedAt": "2026-11-16T12:00:00.000Z",
+  "squares": [
+    ["2600/1200", "col1"],
+    ["2604/1200", "col3"]
+  ]
+}
+```
+
+Each square is stored as `[id, colorId]`. The ID is the lower-left corner of the square in kilometres (Swiss coordinates, EPSG:2056), the color IDs are defined in `js/config.js`.
 
 ## Run locally
 
@@ -33,6 +57,7 @@ swiss-map-app/
 ├── index.html          Main HTML page
 ├── style.css           Styling
 ├── start-server.bat    Starts a local web server (Windows)
+├── BACKLOG.md          Open change proposals
 └── js/
     ├── main.js         App start and coordination
     ├── config.js       Constants and configuration
@@ -40,6 +65,7 @@ swiss-map-app/
     ├── grid.js         Grid drawing
     ├── selection.js    Square selection
     ├── storage.js      Scenario management (localStorage)
+    ├── fileio.js       Download and upload of scenario files
     └── ui.js           Menu, info button and pop-ups
 ```
 
