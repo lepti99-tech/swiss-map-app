@@ -7,8 +7,6 @@ import { createMenu, updateSquareCountDisplay } from './ui.js';
 
 // Initialize app
 function initApp() {
-  console.log("Swiss Grid App is starting...");
-
   // Initialize map
   initMap();
 
@@ -26,8 +24,6 @@ function initApp() {
     toggleSquare(x, y);
     updateSquareCountDisplay();
   });
-
-  console.log("Swiss Grid App started successfully!");
 }
 
 // Start app as soon as the DOM is loaded

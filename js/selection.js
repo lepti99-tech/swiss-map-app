@@ -111,7 +111,6 @@ export function toggleSquare(x, y) {
     const feature = selectedSquares[id].feature;
     selectedSquaresSource.removeFeature(feature);
     delete selectedSquares[id];
-    console.log(`Square ${id} removed`);
   } else {
     // Square is not selected yet → add it with the current color
     const polygon = createSquarePolygon(x, y);
@@ -125,7 +124,6 @@ export function toggleSquare(x, y) {
       visited: true,
       color: currentColor
     };
-    console.log(`Square ${id} added with color ${currentColor}`);
   }
 
   // Automatically save to the active scenario
@@ -160,6 +158,4 @@ export function loadSquares(squares) {
       color: color || DEFAULT_COLOR_ID
     };
   });
-
-  console.log(`Scenario loaded: ${squares.length} square(s) displayed.`);
 }
