@@ -7,7 +7,7 @@ Effort: S = small (under 1 h), M = medium (a few hours), L = large (one or more 
 
 1. ~~Phase 1 – Clean-up and foundation: #7, #3 (incl. #2), #5~~ (done)
 2. ~~Phase 2 – Scenario management: #6, #12, #8, #1~~ (done)
-3. Phase 3 – Grid: #10, #11
+3. Phase 3 – Grid: ~~#11~~ (done), #10
 4. Phase 4 – Sharing: #9
 
 ## Open
@@ -28,12 +28,6 @@ Only squares that cover at least part of Switzerland are drawn and clickable
 - Already colored squares outside Switzerland are removed when loading (does not occur in practice).
 - The grid is then drawn as square outlines instead of continuous lines.
 
-### 11. Selectable square size (M–L)
-Square sizes 4, 5, 10 and 20 km, all starting from the same origin (2600000 / 1200000).
-- Size is chosen in the "Start new scenario" pop-up and stays fixed for the scenario.
-- Without an active scenario, a slider in the menu allows switching; the current selection is lost.
-- Stored per scenario; existing scenarios without a size count as 4 km (no migration needed).
-
 ## Done
 
 - Pin library versions in `index.html` (OpenLayers 10.11.0, proj4 2.22.0)
@@ -46,3 +40,5 @@ Square sizes 4, 5, 10 and 20 km, all starting from the same origin (2600000 / 12
 - #6 Download scenario as JSON (`js/fileio.js`, format version 1 incl. square size)
 - #8 Load pop-up with dropdown and "Upload from file", incl. name conflict handling
 - #12 Rename the active scenario via pencil icon
+- #11 Selectable square size (4, 5, 10, 20 km): chosen in "Start new scenario", stored per
+  scenario (`gridSize`, missing = 4 km), slider in the menu without active scenario

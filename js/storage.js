@@ -3,10 +3,13 @@
 // Data structure:
 // localStorage["swissGridScenarios"] = {
 //   "<name>": {
-//     squares: [ [id, color], [id, color], ... ]
+//     squares: [ [id, color], [id, color], ... ],
+//     gridSize: 4000        // square size in meters; missing in older scenarios = 4000
 //   },
 //   ...
 // }
+
+import { DEFAULT_GRID_SIZE } from './config.js';
 
 const STORAGE_KEY = "swissGridScenarios";
 
@@ -63,10 +66,11 @@ export function scenarioExists(name) {
  * Creates a new scenario with the given name and makes it active.
  * squares: optional initial list of [id, color] pairs (e.g. an uploaded file
  * or a selection made before the scenario existed). Default: empty.
+ * gridSize: square size in meters, fixed for the lifetime of the scenario.
  * Returns { success: true, name } on success,
  * or { success: false, error: "..." } if the name is empty or already exists.
  */
-export function saveScenario(name, squares = []) {
+export function saveScenario(name, squares = [], gridSize = DEFAULT_GRID_SIZE) {
   const trimmedName = name.trim();
 
   if (!trimmedName) {
@@ -82,7 +86,7 @@ export function saveScenario(name, squares = []) {
     };
   }
 
-  scenarios[trimmedName] = { squares: squares };
+  scenarios[trimmedName] = { squares: squares, gridSize: gridSize };
   writeAllScenarios(scenarios);
 
   activeScenarioName = trimmedName;
@@ -140,8 +144,8 @@ export function renameScenario(oldName, newName) {
 
 /**
  * Loads an existing scenario and makes it active.
- * Returns the saved squares ([[id, color], ...]) so the UI
- * can display the selection on the map.
+ * Returns the saved squares ([[id, color], ...]) and the square size,
+ * so the UI can display the selection on the map.
  * Returns { success: false, error: "..." } if the scenario does not exist.
  */
 export function loadScenario(name) {
@@ -153,7 +157,11 @@ export function loadScenario(name) {
 
   activeScenarioName = name;
 
-  return { success: true, squares: scenarios[name].squares };
+  return {
+    success: true,
+    squares: scenarios[name].squares,
+    gridSize: scenarios[name].gridSize || DEFAULT_GRID_SIZE,
+  };
 }
 
 /**

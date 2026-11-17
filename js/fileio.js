@@ -6,18 +6,27 @@
 //   "app": "swiss-grid-app",
 //   "formatVersion": 1,
 //   "name": "<scenario name or null>",
-//   "gridSize": 4000,
+//   "gridSize": 4000,          (4000, 5000, 10000 or 20000; missing = 4000)
 //   "exportedAt": "<ISO date>",
 //   "squares": [ ["idX/idY", "colorId"], ... ]
 // }
 
-import { GRID_SIZE, COLORS, DEFAULT_COLOR_ID } from './config.js';
+import { GRID_SIZES, DEFAULT_GRID_SIZE, GRID_ORIGIN, COLORS, DEFAULT_COLOR_ID } from './config.js';
 
 const APP_ID = "swiss-grid-app";
 const FORMAT_VERSION = 1;
 
 // Square IDs are kilometre coordinates of the lower-left corner, e.g. "2600/1200"
 const SQUARE_ID_PATTERN = /^\d+\/\d+$/;
+
+// True if the ID is the lower-left corner of a square of the given size
+function fitsGrid(id, gridSize) {
+  const [idX, idY] = id.split("/").map(Number);
+  return (
+    (idX * 1000 - GRID_ORIGIN[0]) % gridSize === 0 &&
+    (idY * 1000 - GRID_ORIGIN[1]) % gridSize === 0
+  );
+}
 
 // Today's date as YYYY-MM-DD (local time)
 function todayString() {
@@ -46,13 +55,14 @@ export function getDownloadFileName(name) {
  * Creates a JSON file with the given squares and lets the browser download it.
  * name: scenario name, or null for an unnamed selection.
  * squares: array of [id, color] pairs.
+ * gridSize: square size in meters.
  */
-export function downloadScenario(name, squares) {
+export function downloadScenario(name, squares, gridSize) {
   const header = {
     app: APP_ID,
     formatVersion: FORMAT_VERSION,
     name: name || null,
-    gridSize: GRID_SIZE,
+    gridSize: gridSize,
     exportedAt: new Date().toISOString(),
   };
 
@@ -86,7 +96,7 @@ export function downloadScenario(name, squares) {
  * Reads and checks the content of an uploaded file.
  * fileText: content of the file as text.
  * fileName: name of the file (used as scenario name if the file has none).
- * Returns { success: true, name, squares } or { success: false, error: "..." }.
+ * Returns { success: true, name, squares, gridSize } or { success: false, error: "..." }.
  */
 export function parseScenarioFile(fileText, fileName) {
   let data;
@@ -104,11 +114,11 @@ export function parseScenarioFile(fileText, fileName) {
     return { success: false, error: "The file was created with a newer version of the app." };
   }
 
-  const gridSize = data.gridSize === undefined ? GRID_SIZE : data.gridSize;
-  if (gridSize !== GRID_SIZE) {
+  const gridSize = data.gridSize === undefined ? DEFAULT_GRID_SIZE : data.gridSize;
+  if (!GRID_SIZES.includes(gridSize)) {
     return {
       success: false,
-      error: `The file uses a square size of ${gridSize / 1000} km. Only ${GRID_SIZE / 1000} km is supported.`,
+      error: "The file uses an unsupported square size.",
     };
   }
 
@@ -119,7 +129,7 @@ export function parseScenarioFile(fileText, fileName) {
   for (const entry of data.squares) {
     const id = Array.isArray(entry) ? entry[0] : undefined;
 
-    if (typeof id !== "string" || !SQUARE_ID_PATTERN.test(id)) {
+    if (typeof id !== "string" || !SQUARE_ID_PATTERN.test(id) || !fitsGrid(id, gridSize)) {
       return { success: false, error: "The file contains invalid squares." };
     }
 
@@ -136,5 +146,5 @@ export function parseScenarioFile(fileText, fileName) {
     name = fileName.replace(/\.json$/i, "").trim() || "Uploaded scenario";
   }
 
-  return { success: true, name, squares };
+  return { success: true, name, squares, gridSize };
 }

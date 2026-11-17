@@ -1,7 +1,8 @@
 // Square selection and management
 
-import { GRID_SIZE, GRID_ORIGIN, GRID_BOUNDS, DEFAULT_COLOR_ID } from './config.js';
+import { GRID_ORIGIN, DEFAULT_COLOR_ID } from './config.js';
 import { selectedSquaresSource } from './map.js';
+import { getGridSize, getGridBounds } from './grid.js';
 import { updateActiveScenario } from './storage.js';
 
 // Stores the selected squares
@@ -28,10 +29,7 @@ export function resetCurrentColor() {
 
 // Calculates the ID of a square from coordinates
 export function getSquareId(x, y) {
-  const gridX =
-    Math.floor((x - GRID_ORIGIN[0]) / GRID_SIZE) * GRID_SIZE + GRID_ORIGIN[0];
-  const gridY =
-    Math.floor((y - GRID_ORIGIN[1]) / GRID_SIZE) * GRID_SIZE + GRID_ORIGIN[1];
+  const [gridX, gridY] = getSquareCoordinates(x, y);
 
   const idX = Math.floor(gridX / 1000);
   const idY = Math.floor(gridY / 1000);
@@ -41,10 +39,11 @@ export function getSquareId(x, y) {
 
 // Calculates the lower-left corner of a square
 export function getSquareCoordinates(x, y) {
+  const size = getGridSize();
   const gridX =
-    Math.floor((x - GRID_ORIGIN[0]) / GRID_SIZE) * GRID_SIZE + GRID_ORIGIN[0];
+    Math.floor((x - GRID_ORIGIN[0]) / size) * size + GRID_ORIGIN[0];
   const gridY =
-    Math.floor((y - GRID_ORIGIN[1]) / GRID_SIZE) * GRID_SIZE + GRID_ORIGIN[1];
+    Math.floor((y - GRID_ORIGIN[1]) / size) * size + GRID_ORIGIN[1];
 
   return [gridX, gridY];
 }
@@ -65,12 +64,13 @@ export function createSquarePolygon(x, y) {
 
 // Creates a polygon directly from the lower-left corner
 function createSquarePolygonFromCorner(gridX, gridY) {
+  const size = getGridSize();
   const coordinates = [
     [
       [gridX, gridY],
-      [gridX + GRID_SIZE, gridY],
-      [gridX + GRID_SIZE, gridY + GRID_SIZE],
-      [gridX, gridY + GRID_SIZE],
+      [gridX + size, gridY],
+      [gridX + size, gridY + size],
+      [gridX, gridY + size],
       [gridX, gridY]
     ]
   ];
@@ -81,12 +81,13 @@ function createSquarePolygonFromCorner(gridX, gridY) {
 // Checks whether coordinates lie within the grid boundaries
 export function isWithinBounds(x, y) {
   const [gridX, gridY] = getSquareCoordinates(x, y);
+  const bounds = getGridBounds();
 
   return (
-    gridX >= GRID_BOUNDS.minX &&
-    gridX < GRID_BOUNDS.maxX &&
-    gridY >= GRID_BOUNDS.minY &&
-    gridY < GRID_BOUNDS.maxY
+    gridX >= bounds.minX &&
+    gridX < bounds.maxX &&
+    gridY >= bounds.minY &&
+    gridY < bounds.maxY
   );
 }
 

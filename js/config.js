@@ -8,10 +8,13 @@ export const RESOLUTIONS = [
 export const EXTENT = [2420000, 1030000, 2900000, 1350000];
 
 // Grid settings
-export const GRID_SIZE = 4000; // 4 km in meters
+// Available square sizes in meters. All sizes share the same origin.
+export const GRID_SIZES = [4000, 5000, 10000, 20000];
+// Size used on app start and for scenarios saved without a size
+export const DEFAULT_GRID_SIZE = 4000;
 export const GRID_ORIGIN = [2600000, 1200000];
 
-// Grid boundaries
+// Grid boundaries (widened to whole squares for each size, see grid.js)
 export const GRID_BOUNDS = {
   minX: 2484000,
   maxX: 2836000,

@@ -1,12 +1,13 @@
 # Swiss Grid App
 
-An interactive map of Switzerland with a grid of 4 × 4 km squares. Click squares to color them and save your selections as named scenarios.
+An interactive map of Switzerland with a grid of squares (4, 5, 10 or 20 km). Click squares to color them and save your selections as named scenarios.
 
 **Live app:** https://lepti99-tech.github.io/swiss-map-app/
 
 ## Features
 
-- Official swisstopo map of Switzerland with a 4 × 4 km grid overlay
+- Official swisstopo map of Switzerland with a grid overlay
+- Square size of 4, 5, 10 or 20 km, chosen per scenario (slider in the menu when no scenario is active)
 - Click a square to color it; click again to remove it
 - Six colors to choose from
 - Counter showing how many squares are selected
@@ -39,7 +40,7 @@ Downloaded scenarios are JSON files:
 }
 ```
 
-Each square is stored as `[id, colorId]`. The ID is the lower-left corner of the square in kilometres (Swiss coordinates, EPSG:2056), the color IDs are defined in `js/config.js`.
+`gridSize` is the square size in metres (4000, 5000, 10000 or 20000; files without it count as 4000). Each square is stored as `[id, colorId]`. The ID is the lower-left corner of the square in kilometres (Swiss coordinates, EPSG:2056), the color IDs are defined in `js/config.js`.
 
 ## Run locally
 

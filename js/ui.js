@@ -8,16 +8,20 @@ import {
 } from './storage.js';
 import {
     loadSquares, setCurrentColor, getCurrentColor, resetCurrentColor,
-    selectedSquares, getSquaresAsArray
+    selectedSquares, getSquaresAsArray, clearAllSquares
 } from './selection.js';
+import { getGridSize, setGridSize } from './grid.js';
 import { downloadScenario, getDownloadFileName, parseScenarioFile } from './fileio.js';
-import { COLORS } from './config.js';
+import { COLORS, GRID_SIZES } from './config.js';
 
 // Module variables: references to elements that are updated later
 let activeScenarioDisplay = null;
 let renameButton = null;         // Pencil button next to the active scenario
 let squareCountDisplay = null;   // Display of the number of selected squares
 let colorCircleElements = {};    // colorId -> DOM element, for the active highlight
+let gridSizeLabel = null;        // "Square size: 4 km"
+let gridSizeSlider = null;       // Slider for the square size (only usable without active scenario)
+let gridSizeTickLabels = [];     // Labels "4 km" ... "20 km" below the slider (the chosen one is bold)
 let noScenarioHintShown = false; // Hint "no active scenario" is shown once per page load
 
 // ---------------------------------------------------------
@@ -55,6 +59,11 @@ function getSquareCount() {
 // "1 square" / "5 squares"
 function squaresText(count) {
     return count === 1 ? '1 square' : `${count} squares`;
+}
+
+// 4000 -> "4 km"
+function sizeText(gridSize) {
+    return `${gridSize / 1000} km`;
 }
 
 // ---------------------------------------------------------
@@ -111,8 +120,10 @@ function openMessagePopup(message) {
 }
 
 // Resets the map and the menu after switching scenarios
-// (new, loaded, uploaded or deleted scenario)
-function showSquares(squares) {
+// (new, loaded, uploaded or deleted scenario).
+// gridSize: square size of the scenario; without it, the current size is kept.
+function showSquares(squares, gridSize = getGridSize()) {
+    setGridSize(gridSize); // must be set before the squares are drawn
     loadSquares(squares);
     resetCurrentColor();
     updateColorSelectionDisplay();
@@ -161,6 +172,9 @@ export function createMenu() {
     menu.appendChild(createButton('Download scenario', 'btn-dark menu-button', openDownloadPopup));
     menu.appendChild(createButton('Delete active scenario', 'btn-dark menu-button', openDeleteScenarioPopup));
 
+    // Square size
+    createGridSizeSlider(menu);
+
     // Color palette
     menu.appendChild(createElement('div', 'color-palette-label', 'Color scheme:'));
 
@@ -197,6 +211,7 @@ function updateActiveScenarioDisplay() {
         ? `Active scenario: ${activeName}`
         : 'Active scenario: –';
     renameButton.hidden = !activeName;
+    updateGridSizeDisplay(); // the slider is locked while a scenario is active
 }
 
 // ---------------------------------------------------------
@@ -208,6 +223,119 @@ export function updateSquareCountDisplay() {
     if (!squareCountDisplay) return;
 
     squareCountDisplay.innerText = `Selected squares: ${getSquareCount()}`;
+}
+
+// ---------------------------------------------------------
+// Square size slider.
+// Only usable without an active scenario; a scenario keeps its size for good.
+// Changing the size removes the current (unsaved) selection.
+// ---------------------------------------------------------
+
+// Layout: a thin line with a tick mark per size, the (invisible) slider on top,
+// and a label centered below each tick mark. See style.css "Square size slider".
+function createGridSizeSlider(menu) {
+    gridSizeLabel = createElement('div', 'grid-size-label');
+    menu.appendChild(gridSizeLabel);
+
+    const control = createElement('div', 'grid-size-control');
+
+    // Line and tick marks
+    const track = createElement('div', 'grid-size-track');
+    // Labels below the tick marks
+    const labels = createElement('div', 'grid-size-tick-labels');
+
+    gridSizeTickLabels = [];
+    GRID_SIZES.forEach((size, index) => {
+        const position = `${(index / (GRID_SIZES.length - 1)) * 100}%`;
+
+        const tick = createElement('div', 'grid-size-tick');
+        tick.style.left = position;
+        track.appendChild(tick);
+
+        const label = createElement('span', 'grid-size-tick-label', sizeText(size));
+        label.style.left = position;
+        labels.appendChild(label);
+        gridSizeTickLabels.push(label);
+    });
+
+    gridSizeSlider = createElement('input', 'grid-size-slider');
+    gridSizeSlider.type = 'range';
+    gridSizeSlider.min = 0;
+    gridSizeSlider.max = GRID_SIZES.length - 1;
+    gridSizeSlider.step = 1;
+    gridSizeSlider.setAttribute('aria-label', 'Square size');
+
+    control.appendChild(track);
+    control.appendChild(gridSizeSlider);
+    control.appendChild(labels);
+    menu.appendChild(control);
+
+    // While dragging: show the size in the label and in bold below the slider
+    gridSizeSlider.oninput = () => {
+        const index = Number(gridSizeSlider.value);
+        gridSizeLabel.innerText = `Square size: ${sizeText(GRID_SIZES[index])}`;
+        highlightTickLabel(index);
+    };
+
+    // Slider released: change the size (with confirmation if squares would be lost)
+    gridSizeSlider.onchange = () => {
+        const newSize = GRID_SIZES[gridSizeSlider.value];
+        updateGridSizeDisplay(); // back to the current size until the change is done
+        if (newSize === getGridSize() || getActiveScenarioName()) return;
+
+        if (getSquareCount() === 0) {
+            changeGridSize(newSize);
+        } else {
+            openChangeGridSizePopup(newSize);
+        }
+    };
+
+    updateGridSizeDisplay();
+}
+
+function updateGridSizeDisplay() {
+    if (!gridSizeSlider) return;
+
+    const locked = Boolean(getActiveScenarioName());
+    gridSizeLabel.innerText = `Square size: ${sizeText(getGridSize())}`;
+    gridSizeSlider.value = GRID_SIZES.indexOf(getGridSize());
+    highlightTickLabel(GRID_SIZES.indexOf(getGridSize()));
+    gridSizeSlider.disabled = locked;
+    gridSizeSlider.title = locked
+        ? 'The square size is fixed for the active scenario.'
+        : 'Choose the square size';
+}
+
+// Shows the label of the given size index in bold
+function highlightTickLabel(activeIndex) {
+    gridSizeTickLabels.forEach((label, index) => {
+        label.classList.toggle('active', index === activeIndex);
+    });
+}
+
+// Changes the size without an active scenario; the current selection is removed
+function changeGridSize(newSize) {
+    clearAllSquares();
+    setGridSize(newSize);
+    updateGridSizeDisplay();
+    updateSquareCountDisplay();
+}
+
+function openChangeGridSizePopup(newSize) {
+    const { box, close } = openPopup();
+
+    box.appendChild(createElement('div', 'popup-text',
+        `Changing the square size to ${sizeText(newSize)} removes your current selection ` +
+        `(${squaresText(getSquareCount())}).`));
+
+    const changeButton = createButton('Change size', 'btn-dark', () => {
+        changeGridSize(newSize);
+        close();
+    });
+    const cancelButton = createButton('Cancel', 'btn-dark', close);
+
+    box.appendChild(createButtonRow(changeButton, cancelButton));
+    cancelButton.focus();
 }
 
 // ---------------------------------------------------------
@@ -238,9 +366,11 @@ function createInfoButton(menu) {
     const infoBox = createElement('div', 'info-box');
     infoBox.hidden = true;
     infoBox.innerHTML = `
-        <strong>Swiss Grid App</strong> – Color 4 × 4 km squares on the map of Switzerland.
+        <strong>Swiss Grid App</strong> – Color squares on the map of Switzerland.
         <ul>
             <li>Click a square to color it; click again to remove it.</li>
+            <li>Squares are 4, 5, 10 or 20 km in size. The size is chosen when starting a
+                scenario and stays fixed for it. Without an active scenario, use the slider.</li>
             <li>Choose a color from the color scheme before clicking.</li>
             <li>Start a new scenario to save your squares under a name. Changes are saved automatically.</li>
             <li>Load, rename (✎) or delete scenarios at any time.</li>
@@ -289,9 +419,26 @@ function openNewScenarioPopup() {
     const input = createTextInput();
     box.appendChild(input);
 
+    // Square size, fixed for the lifetime of the scenario
+    box.appendChild(createElement('label', 'popup-label', 'Square size:'));
+    const sizeSelect = createElement('select', 'popup-select popup-select-spaced');
+    GRID_SIZES.forEach((size) => {
+        const option = createElement('option', null, sizeText(size));
+        option.value = size;
+        sizeSelect.appendChild(option);
+    });
+    sizeSelect.value = getGridSize();
+    box.appendChild(sizeSelect);
+
     if (takeOverSelection) {
+        // The selection was made with the current size, so the size cannot be changed here
+        sizeSelect.disabled = true;
         box.appendChild(createElement('div', 'popup-text popup-small',
-            `Your current selection (${squaresText(getSquareCount())}) will be saved in the new scenario.`));
+            `Your current selection (${squaresText(getSquareCount())}) will be saved in the new scenario. ` +
+            'The square size cannot be changed later.'));
+    } else {
+        box.appendChild(createElement('div', 'popup-text popup-small',
+            'The square size cannot be changed later.'));
     }
 
     const errorMsg = createErrorMessage();
@@ -306,7 +453,8 @@ function openNewScenarioPopup() {
         }
 
         const squares = takeOverSelection ? getSquaresAsArray() : [];
-        const result = saveScenario(name, squares);
+        const gridSize = Number(sizeSelect.value);
+        const result = saveScenario(name, squares, gridSize);
 
         if (!result.success) {
             errorMsg.innerText = result.error;
@@ -319,7 +467,7 @@ function openNewScenarioPopup() {
             updateSquareCountDisplay();
         } else {
             // New scenario starts empty
-            showSquares([]);
+            showSquares([], gridSize);
         }
         close();
     });
@@ -393,7 +541,7 @@ function openDownloadPopup() {
         'You can load the file again later via "Load existing scenario" → "Upload from file".'));
 
     const downloadButton = createButton('Download', 'btn-dark', () => {
-        downloadScenario(activeName, getSquaresAsArray());
+        downloadScenario(activeName, getSquaresAsArray(), getGridSize());
         close();
     });
     const cancelButton = createButton('Cancel', 'btn-dark', close);
@@ -441,7 +589,7 @@ function openLoadScenarioPopup() {
                 return;
             }
 
-            showSquares(result.squares);
+            showSquares(result.squares, result.gridSize);
             close();
         });
         box.appendChild(loadButton);
@@ -489,7 +637,7 @@ function openLoadScenarioPopup() {
             return;
         }
 
-        saveUploadedScenario(parsed.name, parsed.squares, errorMsg, close);
+        saveUploadedScenario(parsed.name, parsed.squares, parsed.gridSize, errorMsg, close);
     };
 
     box.appendChild(errorMsg);
@@ -497,15 +645,15 @@ function openLoadScenarioPopup() {
 }
 
 // Saves an uploaded scenario in the browser, makes it active and shows it
-function saveUploadedScenario(name, squares, errorMsg, close) {
-    const result = saveScenario(name, squares);
+function saveUploadedScenario(name, squares, gridSize, errorMsg, close) {
+    const result = saveScenario(name, squares, gridSize);
 
     if (!result.success) {
         errorMsg.innerText = result.error;
         return;
     }
 
-    showSquares(squares);
+    showSquares(squares, gridSize);
     close();
 }
 
@@ -538,7 +686,7 @@ function showUploadNameConflict(box, close, parsed) {
             errorMsg.innerText = 'Please enter a name.';
             return;
         }
-        saveUploadedScenario(input.value.trim(), parsed.squares, errorMsg, close);
+        saveUploadedScenario(input.value.trim(), parsed.squares, parsed.gridSize, errorMsg, close);
     });
     const cancelButton = createButton('Cancel', 'btn-dark', close);
 

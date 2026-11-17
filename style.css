@@ -135,6 +135,127 @@ button {
   padding-left: 18px;
 }
 
+/* Square size slider */
+
+.grid-size-label {
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+/*
+  The slider is built from three layers inside .grid-size-control:
+  - .grid-size-track: thin line with tick marks (drawn by us)
+  - .grid-size-slider: the real slider; its own track is invisible, only the dot is shown
+  - .grid-size-tick-labels: "4 km" ... "20 km", centered below the tick marks
+  Line, ticks and labels are inset by half the dot width (8px), because the
+  center of the dot only travels from 8px to (width - 8px).
+*/
+
+.grid-size-control {
+  position: relative;
+  width: 4.5cm;
+  height: 38px;
+  margin-top: 4px;
+}
+
+.grid-size-track {
+  position: absolute;
+  top: 9px;            /* line center = 10px = center of the 20px slider */
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background-color: #222222;
+}
+
+.grid-size-tick {
+  position: absolute;
+  top: -5px;
+  width: 2px;
+  height: 12px;
+  background-color: #222222;
+  transform: translateX(-50%);
+}
+
+.grid-size-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.grid-size-slider:disabled {
+  cursor: not-allowed;
+}
+
+/* Invisible track of the real slider (Chrome/Edge and Firefox) */
+.grid-size-slider::-webkit-slider-runnable-track {
+  height: 20px;
+  background: transparent;
+}
+
+.grid-size-slider::-moz-range-track {
+  height: 20px;
+  background: transparent;
+}
+
+/* The dot: blue when the slider can be moved */
+.grid-size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;     /* centers the 16px dot on the 20px track */
+  border: 2px solid #0075ff;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background-color: #0075ff;
+}
+
+.grid-size-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #0075ff;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background-color: #0075ff;
+}
+
+/* The dot: white with a grey ring when the slider is locked (active scenario) */
+.grid-size-slider:disabled::-webkit-slider-thumb {
+  border-color: #808080;
+  background-color: white;
+}
+
+.grid-size-slider:disabled::-moz-range-thumb {
+  border-color: #808080;
+  background-color: white;
+}
+
+.grid-size-tick-labels {
+  position: absolute;
+  top: 22px;
+  left: 8px;
+  right: 8px;
+}
+
+.grid-size-tick-label {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 11px;
+  white-space: nowrap;
+  color: #222222;
+}
+
+.grid-size-tick-label.active {
+  font-weight: bold;
+}
+
 /* Color palette */
 
 .color-palette-label {
@@ -207,6 +328,10 @@ button {
 .popup-select {
   padding: 5px;
   font-size: 14px;
+}
+
+.popup-select-spaced {
+  margin-bottom: 8px;
 }
 
 /* File name shown in the download pop-up */
