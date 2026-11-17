@@ -7,6 +7,7 @@ An interactive map of Switzerland with a grid of squares (4, 5, 10 or 20 km). Cl
 ## Features
 
 - Official swisstopo map of Switzerland with a grid overlay
+- Only squares that touch Swiss territory are shown (border lakes up to the border; Liechtenstein counts as abroad)
 - Square size of 4, 5, 10 or 20 km, chosen per scenario (slider in the menu when no scenario is active)
 - Click a square to color it; click again to remove it
 - Six colors to choose from
@@ -67,8 +68,20 @@ swiss-map-app/
     ├── selection.js    Square selection
     ├── storage.js      Scenario management (localStorage)
     ├── fileio.js       Download and upload of scenario files
+    ├── swiss-squares.js  Generated list of squares that touch Switzerland
     └── ui.js           Menu, info button and pop-ups
+tools/
+└── build_swiss_squares.py  Generates js/swiss-squares.js from swisstopo data
 ```
+
+## Swiss squares (`js/swiss-squares.js`)
+
+The list of valid squares per square size is generated once from the official Swiss
+border (swissBOUNDARIES3D by swisstopo; Lake Constance up to the middle of the lake) and committed. A square
+is included if any part of its area lies in Switzerland. To regenerate it, download the
+GeoPackage as described at the top of `tools/build_swiss_squares.py`, unzip it into
+`tools/data/` (not committed) and run `python tools/build_swiss_squares.py`.
+Manual corrections go into `MANUAL_ADD` / `MANUAL_REMOVE` in the script.
 
 ## Built with
 

@@ -1,7 +1,7 @@
 // Main file: coordinates all modules and starts the app
 
 import { initMap, map } from './map.js';
-import { setupGridUpdates } from './grid.js';
+import { updateGrid } from './grid.js';
 import { toggleSquare } from './selection.js';
 import { createMenu, updateSquareCountDisplay, showNoScenarioHintOnce } from './ui.js';
 
@@ -10,8 +10,8 @@ function initApp() {
   // Initialize map
   initMap();
 
-  // Set up grid updates
-  setupGridUpdates();
+  // Draw grid (outlines of all squares that touch Switzerland)
+  updateGrid();
  
   // Create menu
   createMenu();

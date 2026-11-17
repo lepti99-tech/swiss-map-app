@@ -1,10 +1,22 @@
-// Grid drawing and updating
+// Grid drawing and the list of valid squares.
+// Only squares that touch Switzerland exist (see js/swiss-squares.js).
 
-import { DEFAULT_GRID_SIZE, GRID_ORIGIN, GRID_BOUNDS } from './config.js';
-import { map, gridSource } from './map.js';
+import { DEFAULT_GRID_SIZE } from './config.js';
+import { gridSource } from './map.js';
+import { SWISS_SQUARES } from './swiss-squares.js';
 
 // Current square size in meters (4000, 5000, 10000 or 20000)
 let gridSize = DEFAULT_GRID_SIZE;
+
+// Square IDs per size as a Set, for fast lookups (created on first use)
+const swissSquareSets = {};
+
+function getSwissSquareSet(size) {
+  if (!swissSquareSets[size]) {
+    swissSquareSets[size] = new Set(SWISS_SQUARES[size] || []);
+  }
+  return swissSquareSets[size];
+}
 
 // Returns the current square size in meters
 export function getGridSize() {
@@ -18,65 +30,42 @@ export function setGridSize(size) {
   updateGrid();
 }
 
-// Grid boundaries for the current square size.
-// GRID_BOUNDS is widened outwards to the nearest square edge, so that the
-// boundaries always lie on grid lines (needed for 5, 10 and 20 km).
-export function getGridBounds() {
-  const [originX, originY] = GRID_ORIGIN;
-  const down = (value, origin) => origin + Math.floor((value - origin) / gridSize) * gridSize;
-  const up = (value, origin) => origin + Math.ceil((value - origin) / gridSize) * gridSize;
-
-  return {
-    minX: down(GRID_BOUNDS.minX, originX),
-    maxX: up(GRID_BOUNDS.maxX, originX),
-    minY: down(GRID_BOUNDS.minY, originY),
-    maxY: up(GRID_BOUNDS.maxY, originY)
-  };
+// True if the square with this ID touches Switzerland (for the given size)
+export function isSwissSquare(id, size = gridSize) {
+  return getSwissSquareSet(size).has(id);
 }
 
-// Update grid based on the current view
+// Removes squares that do not touch Switzerland from a list of [id, color] pairs
+export function filterSwissSquares(squares, size = gridSize) {
+  return squares.filter(([id]) => isSwissSquare(id, size));
+}
+
+// Lower-left corner in meters from an ID ("idX/idY" in km)
+export function getCornerFromId(id) {
+  const [idX, idY] = id.split('/').map(Number);
+  return [idX * 1000, idY * 1000];
+}
+
+// Polygon of a square from its lower-left corner (current size)
+export function createSquarePolygonFromCorner(gridX, gridY) {
+  return new ol.geom.Polygon([[
+    [gridX, gridY],
+    [gridX + gridSize, gridY],
+    [gridX + gridSize, gridY + gridSize],
+    [gridX, gridY + gridSize],
+    [gridX, gridY]
+  ]]);
+}
+
+// Draws the outline of every Swiss square for the current size.
+// Called on start and whenever the size changes (not on every pan/zoom).
 export function updateGrid() {
   gridSource.clear();
 
-  const view = map.getView();
-  const extent = view.calculateExtent(map.getSize());
+  const features = (SWISS_SQUARES[gridSize] || []).map((id) => {
+    const [gridX, gridY] = getCornerFromId(id);
+    return new ol.Feature(createSquarePolygonFromCorner(gridX, gridY));
+  });
 
-  const [minX, minY, maxX, maxY] = extent;
-  const [originX, originY] = GRID_ORIGIN;
-  const bounds = getGridBounds();
-
-  // Calculate start lines (left/bottom of the view)
-  const startX = originX + Math.floor((minX - originX) / gridSize) * gridSize;
-  const startY = originY + Math.floor((minY - originY) / gridSize) * gridSize;
-
-  // Vertical lines (only within the boundaries)
-  for (let x = startX; x <= maxX; x += gridSize) {
-    if (x >= bounds.minX && x <= bounds.maxX) {
-      const line = new ol.geom.LineString([
-        [x, Math.max(minY, bounds.minY)],
-        [x, Math.min(maxY, bounds.maxY)]
-      ]);
-      gridSource.addFeature(new ol.Feature(line));
-    }
-  }
-
-  // Horizontal lines (only within the boundaries)
-  for (let y = startY; y <= maxY; y += gridSize) {
-    if (y >= bounds.minY && y <= bounds.maxY) {
-      const line = new ol.geom.LineString([
-        [Math.max(minX, bounds.minX), y],
-        [Math.min(maxX, bounds.maxX), y]
-      ]);
-      gridSource.addFeature(new ol.Feature(line));
-    }
-  }
-}
-
-// Register event listener for grid updates
-export function setupGridUpdates() {
-  map.getView().on("change:resolution", updateGrid);
-  map.getView().on("change:center", updateGrid);
-
-  // Draw initial grid
-  updateGrid();
+  gridSource.addFeatures(features);
 }

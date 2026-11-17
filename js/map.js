@@ -56,11 +56,15 @@ function createWMTSLayer(layerConfig, projection) {
 function createGridLayer() {
   gridSource = new ol.source.Vector();
 
+  // Each square is drawn as its own outline, so neighbouring squares share edges.
+  // The stroke is opaque and the transparency is set on the whole layer;
+  // that way shared edges do not look darker than outer edges.
   gridLayer = new ol.layer.Vector({
     source: gridSource,
+    opacity: 0.7,
     style: new ol.style.Style({
       stroke: new ol.style.Stroke({
-        color: "rgba(0, 0, 139, 0.7)", // dark blue
+        color: "rgb(0, 0, 139)", // dark blue
         width: 1.5
       })
     })

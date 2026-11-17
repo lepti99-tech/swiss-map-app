@@ -14,14 +14,6 @@ export const GRID_SIZES = [4000, 5000, 10000, 20000];
 export const DEFAULT_GRID_SIZE = 4000;
 export const GRID_ORIGIN = [2600000, 1200000];
 
-// Grid boundaries (widened to whole squares for each size, see grid.js)
-export const GRID_BOUNDS = {
-  minX: 2484000,
-  maxX: 2836000,
-  minY: 1072000,
-  maxY: 1296000
-};
-
 // Projection for the Swiss coordinate system
 export const PROJECTION_CODE = "EPSG:2056";
 export const PROJECTION_DEF =

@@ -10,7 +10,7 @@ import {
     loadSquares, setCurrentColor, getCurrentColor, resetCurrentColor,
     selectedSquares, getSquaresAsArray, clearAllSquares
 } from './selection.js';
-import { getGridSize, setGridSize } from './grid.js';
+import { getGridSize, setGridSize, filterSwissSquares } from './grid.js';
 import { downloadScenario, getDownloadFileName, parseScenarioFile } from './fileio.js';
 import { COLORS, GRID_SIZES } from './config.js';
 
@@ -368,7 +368,8 @@ function createInfoButton(menu) {
     infoBox.innerHTML = `
         <strong>Swiss Grid App</strong> – Color squares on the map of Switzerland.
         <ul>
-            <li>Click a square to color it; click again to remove it.</li>
+            <li>Click a square to color it; click again to remove it.
+                Only squares that touch Switzerland are shown.</li>
             <li>Squares are 4, 5, 10 or 20 km in size. The size is chosen when starting a
                 scenario and stays fixed for it. Without an active scenario, use the slider.</li>
             <li>Choose a color from the color scheme before clicking.</li>
@@ -645,7 +646,9 @@ function openLoadScenarioPopup() {
 }
 
 // Saves an uploaded scenario in the browser, makes it active and shows it
-function saveUploadedScenario(name, squares, gridSize, errorMsg, close) {
+function saveUploadedScenario(name, uploadedSquares, gridSize, errorMsg, close) {
+    // Squares outside Switzerland are not taken over
+    const squares = filterSwissSquares(uploadedSquares, gridSize);
     const result = saveScenario(name, squares, gridSize);
 
     if (!result.success) {

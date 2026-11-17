@@ -2,7 +2,9 @@
 
 import { GRID_ORIGIN, DEFAULT_COLOR_ID } from './config.js';
 import { selectedSquaresSource } from './map.js';
-import { getGridSize, getGridBounds } from './grid.js';
+import {
+  getGridSize, isSwissSquare, getCornerFromId, createSquarePolygonFromCorner
+} from './grid.js';
 import { updateActiveScenario } from './storage.js';
 
 // Stores the selected squares
@@ -48,47 +50,10 @@ export function getSquareCoordinates(x, y) {
   return [gridX, gridY];
 }
 
-// Calculates the lower-left corner of a square directly from an ID ("idX/idY")
-function getSquareCoordinatesFromId(id) {
-  const [idX, idY] = id.split('/').map(Number);
-  const gridX = idX * 1000;
-  const gridY = idY * 1000;
-  return [gridX, gridY];
-}
-
 // Creates a polygon for a square (based on click coordinates)
 export function createSquarePolygon(x, y) {
   const [gridX, gridY] = getSquareCoordinates(x, y);
   return createSquarePolygonFromCorner(gridX, gridY);
-}
-
-// Creates a polygon directly from the lower-left corner
-function createSquarePolygonFromCorner(gridX, gridY) {
-  const size = getGridSize();
-  const coordinates = [
-    [
-      [gridX, gridY],
-      [gridX + size, gridY],
-      [gridX + size, gridY + size],
-      [gridX, gridY + size],
-      [gridX, gridY]
-    ]
-  ];
-
-  return new ol.geom.Polygon(coordinates);
-}
-
-// Checks whether coordinates lie within the grid boundaries
-export function isWithinBounds(x, y) {
-  const [gridX, gridY] = getSquareCoordinates(x, y);
-  const bounds = getGridBounds();
-
-  return (
-    gridX >= bounds.minX &&
-    gridX < bounds.maxX &&
-    gridY >= bounds.minY &&
-    gridY < bounds.maxY
-  );
 }
 
 // Returns the current selection as an array of [id, color] pairs
@@ -100,13 +65,14 @@ export function getSquaresAsArray() {
 }
 
 // Toggles a square on/off.
-// Returns true if a square was added or removed, false if the click was outside the grid.
+// Returns true if a square was added or removed, false if the click was outside the grid
+// (i.e. on a square that does not touch Switzerland).
 export function toggleSquare(x, y) {
-  if (!isWithinBounds(x, y)) {
-    return false; // Outside the boundaries, do nothing
-  }
-
   const id = getSquareId(x, y);
+
+  if (!isSwissSquare(id)) {
+    return false; // Not a Swiss square, do nothing
+  }
 
   if (selectedSquares[id]) {
     // Square is already selected → remove it
@@ -142,13 +108,16 @@ export function clearAllSquares() {
 }
 
 // Loads a given list of [id, color] pairs and displays them on the map.
-// Called when a scenario is loaded.
+// Called when a scenario is loaded. Squares that do not touch Switzerland are
+// skipped; they disappear from the scenario the next time it is saved.
 export function loadSquares(squares) {
   // First reset the current selection
   clearAllSquares();
 
   squares.forEach(([id, color]) => {
-    const [gridX, gridY] = getSquareCoordinatesFromId(id);
+    if (!isSwissSquare(id)) return;
+
+    const [gridX, gridY] = getCornerFromId(id);
     const polygon = createSquarePolygonFromCorner(gridX, gridY);
     const feature = new ol.Feature(polygon);
     feature.setId(id);
